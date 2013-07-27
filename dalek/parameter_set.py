@@ -39,19 +39,46 @@ class TARDISParameterSet(object):
         else:
             self.parameter_sets = pd.merge(self.parameter_sets, pd.DataFrame(new_data_dict), on='merge_key')
 
-    def __iter__(self):
-        self.current_parameter_set_id = -1
-        return self
+    def add_column(self, parameter_name, parameter_default=None):
+        parameter_hierarchy = parameter_name.split('.')
+        try:
+            getitem_hierarchical(self.default_configuration.config_dict, parameter_hierarchy)
+        except KeyError:
+            raise ValueError('Parameter %s not found in hierarchical_dict' % parameter_name)
 
-    def next(self):
-        current_config = copy.deepcopy(self.default_configuration.config_dict)
-        self.current_parameter_set_id += 1
-        if self.current_parameter_set_id >= len(self.parameter_sets):
-            raise StopIteration
+        self.parameter_sets[parameter_name] = parameter_default
 
-        current_parameter_set = self.parameter_sets.iloc[self.current_parameter_set_id]
-        for column in current_parameter_set.keys():
-            if column == 'merge_key':
-                continue
-            setitem_hierarchical(current_config, column.split('.'), current_parameter_set[column])
-        return current_config
+
+
+    def generate_parameter_set_lists(self, generate_history_fnames=False):
+        parameter_sets = []
+        if generate_history_fnames:
+            self.parameter_sets['history_fname'] = None
+        for id, row in self.parameter_sets.iterrows():
+            current_config = copy.deepcopy(self.default_configuration.config_dict)
+            history_fname_list = ['history']
+            for column in row.index:
+                if column == 'merge_key' or column == 'history_fname':
+                    continue
+
+                if column == 'plasma.nlte.species':
+                    if not row[column]:
+                        history_fname_list += ['species-%s' % row[column]]
+                    else:
+                        species_string_list = []
+                        for species in row[column]:
+                            species_string_list += [config_reader.species_tuple_to_string(species,
+                                                                              self.default_configuration.atom_data).replace(' ', '')]
+                        history_fname_list+= ['species-%s' % ('_'.join(species_string_list),)]
+
+                else:
+                    history_fname_list += ['%s-%s' % (column.split('.')[-1], row[column])]
+                if not row[column]:
+                    continue
+
+                setitem_hierarchical(current_config, column.split('.'), row[column])
+            if generate_history_fnames:
+                self.parameter_sets['history_fname'][id] = '_'.join(history_fname_list) + '.h5'
+            parameter_sets.append(current_config)
+
+        return parameter_sets
