@@ -2,6 +2,7 @@ from tardis import config_reader
 import pandas as pd
 import numpy as np
 import copy
+import yaml
 
 
 def getitem_hierarchical(config_dict, hierarchy):
@@ -22,7 +23,7 @@ def setitem_hierarchical(config_dict, hierarchy, value):
 
 class TARDISParameterSet(object):
     def __init__(self, default_yaml):
-        self.default_configuration = config_reader.TARDISConfiguration.from_yaml(default_yaml)
+        self.default_configuration = config_reader.TARDISConfigurationNameSpace(yaml.load(open(default_yaml)))
 
         self.parameter_sets = None
 
@@ -65,11 +66,7 @@ class TARDISParameterSet(object):
                     if not row[column]:
                         history_fname_list += ['species-%s' % row[column]]
                     else:
-                        species_string_list = []
-                        for species in row[column]:
-                            species_string_list += [config_reader.species_tuple_to_string(species,
-                                                                              self.default_configuration.atom_data).replace(' ', '')]
-                        history_fname_list+= ['species-%s' % ('_'.join(species_string_list),)]
+                        history_fname_list+= ['species-%s' % ('_'.join(row[column]),)]
 
                 else:
                     history_fname_list += ['%s-%s' % (column.split('.')[-1], row[column])]
@@ -78,7 +75,9 @@ class TARDISParameterSet(object):
 
                 setitem_hierarchical(current_config, column.split('.'), row[column])
             if generate_history_fnames:
-                self.parameter_sets['history_fname'][id] = '_'.join(history_fname_list) + '.h5'
+                current_history_fname = '_'.join(history_fname_list) + '.h5'
+                current_history_fname = current_history_fname.replace(' ', '.').replace('/', '_')
+                self.parameter_sets['history_fname'][id] = current_history_fname
             parameter_sets.append(current_config)
 
         return parameter_sets
