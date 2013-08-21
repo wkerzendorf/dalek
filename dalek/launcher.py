@@ -19,13 +19,12 @@ def set_engines_cpu_affinity():
             p.set_cpu_affinity(range(cpu_count()))
 
 
-def prepare_remote_clients(clients, atom_data,  dalek_worker_dir):
+def prepare_remote_clients(clients, atom_data):
 
     clients[:].execute('from tardis import config_reader, simulation, model_radial_oned')
     clients[:].execute('from astropy import units as u')
     clients[:].execute('import os')
     clients[:]['atom_data'] = atom_data
-    clients[:]['dalek_worker_dir'] = dalek_worker_dir
 
     for client in clients:
         client.apply(set_engines_cpu_affinity)
@@ -36,9 +35,6 @@ def prepare_remote_clients(clients, atom_data,  dalek_worker_dir):
 @interactive
 def dalek_worker(config_dict, history_fname=None):
     tardis_config = config_reader.TARDISConfiguration.from_config_dict(config_dict, atom_data=atom_data)
-
-    if history_fname is not None:
-        history_fname = os.path.join(dalek_worker_dir, history_fname)
     radial1d_mdl = model_radial_oned.Radial1DModel(tardis_config)
     simulation.run_radial1d(radial1d_mdl, history_fname)
 
@@ -48,7 +44,7 @@ def dalek_worker(config_dict, history_fname=None):
 def dalek_launcher(clients, parameter_sets, history_dir=None):
     load_balanced_view = clients.load_balanced_view()
     if history_dir:
-        clients[:]['history_dir'] = [os.path.join(clients[:]['dalek_worker_dir'])]
+
         parameter_collection = parameter_sets.generate_parameter_set_lists(generate_history_fnames=True)
         #return parameter_collection
         history_fnames = [os.path.join(history_dir, item) for item in parameter_sets.parameter_sets['history_fname']]
