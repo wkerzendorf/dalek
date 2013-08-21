@@ -33,7 +33,7 @@ class DalekParameterSet(object):
 
     @classmethod
     def from_yaml(cls, yaml_fname):
-        default_config_dict = config_reader.TARDISConfigurationNameSpace(yaml.load(open(yaml_fname)))
+        default_config_dict = yaml.load(open(yaml_fname))
         return cls(default_config_dict)
 
     @classmethod
@@ -137,11 +137,13 @@ class DalekParameterSet(object):
     def launch_parameter_set(self, clients, history_dir=None):
         load_balanced_view = clients.load_balanced_view()
         if history_dir:
+            print "generating history_fnames"
             parameter_collection = self.generate_parameter_set_lists(generate_history_fnames=True)
             history_fnames = [os.path.join(history_dir, item) for item in self.parameter_sets['history_fname']]
-            amr = load_balanced_view.map(launcher.dalek_worker, parameter_collection, history_fnames)
+            print history_fnames[0]
+            self.amr = load_balanced_view.map(launcher.dalek_worker, parameter_collection, history_fnames)
         else:
             parameter_collection = self.generate_parameter_set_lists(generate_history_fnames=False)
-            amr = load_balanced_view.map(launcher.dalek_worker, parameter_collection)
+            self.amr = load_balanced_view.map(launcher.dalek_worker, parameter_collection)
 
-        amr.wait_interactive()
+        self.amr.wait_interactive()
