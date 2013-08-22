@@ -130,7 +130,7 @@ class DalekParameterSet(object):
                 iterations = None
             history_fname = parameter_set['history_fname']
             logger.info('Reading %s', history_fname)
-            history_objects.append(analysis.TARDISHistory(history_fname, history_dir, iterations=iterations))
+            history_objects.append(analysis.TARDISHistory(os.path.join(history_dir, history_fname), iterations=iterations))
 
         self.parameter_sets['history_objects'] = history_objects
 
@@ -147,3 +147,4 @@ class DalekParameterSet(object):
             self.amr = load_balanced_view.map(launcher.dalek_worker, parameter_collection)
 
         self.amr.wait_interactive()
+        self.parameter_sets['no_iterations'] = self.amr.get()
