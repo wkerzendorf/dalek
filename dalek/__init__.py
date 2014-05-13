@@ -1,7 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-__all__ = ['__version__', '__githash__', 'test']
-
 #this indicates whether or not we are in the package's setup.py
 try:
     _ASTROPY_SETUP_
@@ -12,6 +10,7 @@ except NameError:
     else:
         import __builtin__ as builtins
     builtins._ASTROPY_SETUP_ = False
+    del version_info
 
 try:
     from .version import version as __version__
@@ -24,9 +23,8 @@ except ImportError:
 
 # set up the test command
 def _get_test_runner():
-    import os
     from astropy.tests.helper import TestRunner
-    return TestRunner(os.path.dirname(__file__))
+    return TestRunner(__path__[0])
 
 def test(package=None, test_path=None, args=None, plugins=None,
          verbose=False, pastebin=None, remote_data=False, pep8=False,
@@ -85,12 +83,6 @@ def test(package=None, test_path=None, args=None, plugins=None,
         this adds extra run time to the test suite.  Works only on
         platforms with a working `lsof` command.
 
-    parallel : int, optional
-        When provided, run the tests in parallel on the specified
-        number of CPUs.  If parallel is negative, it will use the all
-        the cores on the machine.  Requires the `pytest-xdist` plugin
-        is installed. Only available when using Astropy 0.3 or later.
-
     kwargs
         Any additional keywords passed into this function will be passed
         on to the astropy test runner.  This allows use of test-related
@@ -127,3 +119,5 @@ if not _ASTROPY_SETUP_:
                     "importing from source, this is expected.")
             warn(config.configuration.ConfigurationDefaultMissingWarning(wmsg))
             del e
+
+    del os, warn, config_dir  # clean up namespace
