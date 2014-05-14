@@ -1,6 +1,8 @@
 import itertools
 import operator
 from functools import reduce
+import pandas as pd
+
 
 def broadcast(lst, length):
     """Extend a given list so it has the given length by repeating values in it.
@@ -91,6 +93,13 @@ def add_dictionary_lists(table1, table2):
 def mul_dictionary_lists(table1, table2):
     combiner = lambda s1, s2: list(itertools.product(s1, s2))
     return combine_parameter_sets(table1, table2, combiner)    
+
+
+class ParameterCollection2(pd.DataFrame):
+
+    def to_config_dict_list(self):
+        pass
+
 
 class ParameterCollection(object):
     """A set of parameters -- key/value pairs used for software configuration purposes.

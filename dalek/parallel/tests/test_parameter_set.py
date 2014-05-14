@@ -1,5 +1,5 @@
 import pytest
-from dalek.parallel.parameter_set import ParameterCollection, broadcast, merge_dicts, apply_dict
+from dalek.parallel.parameter_collection import ParameterCollection, broadcast, merge_dicts, apply_dict
 
 def test_simple_cartesian1():
     param1 = ParameterCollection({'a.b.param1' : [0.1, 0.2, 0.3]})

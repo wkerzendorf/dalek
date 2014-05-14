@@ -1,6 +1,6 @@
 import logging
 
-from IPython.parallel.util import interactive
+from IPython.parallel import interactive, RemoteError
 logger = logging.getLogger(__name__)
 from dalek.parallel.util import set_engines_cpu_affinity
 
@@ -35,7 +35,31 @@ def simple_worker(config_dict, atom_data=None):
     return radial1d_mdl
 
 
+@interactive
+def fitter_worker(config_dict, atom_data=None):
+    """
+    This is a TARDIS worker that will run TARDIS and evaluate the returned model
+    by running the pushed fitness_function object
 
+    Parameters
+    ----------
+
+    config_dict: ~dict
+        a valid TARDIS config dictionary
+
+    """
+
+    if atom_data is None:
+        if default_atom_data is None:
+            raise ValueError('AtomData not available - please specify')
+        else:
+            atom_data = default_atom_data
+
+    tardis_config = config_reader.TARDISConfiguration.from_config_dict(config_dict, atom_data=atom_data)
+    radial1d_mdl = model_radial_oned.Radial1DModel(tardis_config)
+    simulation.run_radial1d(radial1d_mdl, history_fname)
+
+    return fitness_function(radial1d_mdl)
 
 class BaseLauncher(object):
     """
@@ -46,7 +70,7 @@ class BaseLauncher(object):
     ----------
 
     remote_clients: ~IPython.parallel.Client
-        iPython remote clients
+        IPython remote clients
 
     worker: func
         a function pointer to the worker function [default=simple_worker]
@@ -54,7 +78,6 @@ class BaseLauncher(object):
     atom_data: ~tardis.atomic.AtomData
         an atom_data instance that is copied to all the remote clients
         if None, each time an atom_data needs to be pushed to the client
-
 
     """
 
@@ -71,8 +94,6 @@ class BaseLauncher(object):
     @staticmethod
     def prepare_remote_clients(clients, atom_data):
 
-        clients[:].execute('from tardis import run_tardis')
-        
         if atom_data is not None:
             clients[:]['default_atom_data'] = atom_data
 
@@ -109,3 +130,16 @@ class BaseLauncher(object):
                             atom_data=atom_data)
 
 
+
+class FitterLauncher(BaseLauncher):
+
+    def __init__(self, remote_clients, fitness_function, atom_data=None,
+                 worker=fitter_worker):
+        self.fitness_function = fitness_function
+        super(FitterLauncher, self).__init__(remote_clients,
+                                           worker=worker,
+                                           atom_data=atom_data)
+
+    def prepare_remote_clients(self, clients, atom_data):
+        super(FitterLauncher, self).prepare_remote_clients(clients, atom_data)
+        clients[:]['fitness_function'] = self.fitness_function

@@ -64,10 +64,12 @@ class TestSimpleInstantiation():
     def setup(self):
         self.launcher = BaseLauncher(remote_clients, worker=simple_worker_test)
 
+    @pytest.mark.xfail
     def test_simple_add(self):
         result = self.launcher.queue_parameter_set({'action':'run'})
         result.get()
 
+    @pytest.mark.xfail
     def test_simple_error(self):
         result = self.launcher.queue_multiple_parameter_sets({'action':'raise'})
         with pytest.raises(RemoteError):

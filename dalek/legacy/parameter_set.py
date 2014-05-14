@@ -1,4 +1,5 @@
-from tardis import config_reader, analysis
+from tardis import  analysis
+from tardis.io import config_reader
 import logging
 
 import pandas as pd
@@ -6,7 +7,7 @@ import numpy as np
 import copy
 import yaml
 import cPickle as pickle
-from dalek import launcher
+from dalek.legacy import launcher
 import os
 
 logger = logging.getLogger(__name__)

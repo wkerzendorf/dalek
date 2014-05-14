@@ -1,4 +1,5 @@
-from tardis import config_reader, atomic
+from tardis import atomic
+from tardis.io import config_reader
 import os
 import logging
 from IPython.parallel.util import interactive
@@ -28,8 +29,6 @@ def prepare_remote_clients(clients, atom_data):
 
     for client in clients:
         client.apply(set_engines_cpu_affinity)
-
-
 
 
 @interactive
