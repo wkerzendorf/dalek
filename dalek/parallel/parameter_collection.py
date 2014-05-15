@@ -96,6 +96,9 @@ def mul_dictionary_lists(table1, table2):
 
 
 class ParameterCollection2(pd.DataFrame):
+    @property
+    def _constructor(self):
+        return ParameterCollection2
 
     def to_config_dict_list(self):
         pass

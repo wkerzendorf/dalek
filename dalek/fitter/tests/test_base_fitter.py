@@ -1,8 +1,6 @@
 from dalek.fitter import BaseFitter, BaseOptimizer
 from dalek.parallel.parameter_collection import ParameterCollection2
-from dalek.parallel.launcher import FitterLauncher
 import numpy as np
-import pandas as pd
 from collections import OrderedDict
 import pytest
 from IPython.parallel import Client, interactive
@@ -14,6 +12,8 @@ except IOError:
     ipcluster_available = False
 else:
     ipcluster_available = True
+
+from numpy.testing import assert_almost_equal
 
 pytestmark = pytest.mark.skipif(not ipcluster_available,
                                 reason='There is no ipython cluster running. '
@@ -43,7 +43,7 @@ class SimpleFitnessFunction(object):
 
     @staticmethod
     def fit_function(x, y, z):
-        return (x**2 + y**2 +z**2) * np.sin(x) * np.sin(y) * np.sin(z)
+        return (x**2 + y**2 +z**2) * np.abs(np.sin(x) * np.sin(y) * np.sin(z))
 
 
 class SimpleTestOptimizer(BaseOptimizer):
@@ -60,17 +60,16 @@ class SimpleTestOptimizer(BaseOptimizer):
 
         if np.any(param_collection.fitness == np.nan):
             raise ValueError
+
         max_idx = param_collection.fitness.argmax()
-        new_param_collection = param_collection[param_collection.index !=
-                                                max_idx]
-        1/0
+        param_collection.fitness = np.nan
         new_x = np.random.uniform(*self.x_bounds)
         new_y = np.random.uniform(*self.y_bounds)
         new_z = np.random.uniform(*self.z_bounds)
-        return new_param_collection.append(dict([('param.x', new_x),
-                                                ('param.y', new_y),
-                                                ('param.z', new_z)]),
-                                           ignore_index=True)
+
+        param_collection.ix[max_idx] = [new_x, new_y, new_z, np.nan]
+
+        return param_collection
 
     def init_parameter_collection(self):
         x_params = np.random.uniform(self.x_bounds[0], self.x_bounds[1],
@@ -114,12 +113,13 @@ class TestSimpleBaseFitter(object):
         self.simple_test_optimizer = SimpleTestOptimizer((-100, 100), (-100, 100),
                                                     (-100, 100), 10)
         self.initial_parameters = self.simple_test_optimizer.init_parameter_collection()
-
         self.simple_test_fitness_function = SimpleFitnessFunction()
+        self.fitter = BaseFitter(self.simple_test_optimizer,
+                                 self.initial_parameters, remote_clients,
+                                 self.simple_test_fitness_function,
+                                 atom_data=None, worker=fitter_test_worker)
 
-        self.launcher = FitterLauncher(remote_clients,
-                                       self.simple_test_fitness_function, None,
-                                       fitter_test_worker)
+
 
 
 
@@ -127,5 +127,17 @@ class TestSimpleBaseFitter(object):
         assert (self.initial_parameters.columns.values.tolist() ==
                 ['param.x', 'param.y', 'param.z', 'fitness'])
 
-    def test_simple_basefitter(self):
-        1/0
+    def test_simple_launcher_evaluation_run(self):
+        parameter_collection = self.fitter.evaluate_parameter_collection(
+            self.initial_parameters)
+        assert_almost_equal(parameter_collection.fitness[0],
+                            self.simple_test_fitness_function(
+                                self.initial_parameters.to_config_dict_list()[0]))
+
+    def test_simple_basefitter_fitting(self):
+        initial_sum = self.fitter.evaluate_parameter_collection(
+            self.initial_parameters).fitness.sum()
+
+        self.fitter.run_fitter(self.initial_parameters)
+
+        assert self.fitter.current_parameters.fitness.sum() < initial_sum

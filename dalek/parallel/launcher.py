@@ -94,8 +94,7 @@ class BaseLauncher(object):
     @staticmethod
     def prepare_remote_clients(clients, atom_data):
 
-        if atom_data is not None:
-            clients[:]['default_atom_data'] = atom_data
+        clients[:]['default_atom_data'] = atom_data
 
         for client in clients:
             client.apply(set_engines_cpu_affinity)
@@ -114,7 +113,7 @@ class BaseLauncher(object):
         return self.lbv.apply(self.worker, parameter_set_dict,
                               atom_data=atom_data)
 
-    def queue_multiple_parameter_sets(self, parameter_set_dicts,
+    def queue_parameter_set_list(self, parameter_set_list,
                                       atom_data=None):
         """
         Add a list of parameter sets to the queue
@@ -126,7 +125,7 @@ class BaseLauncher(object):
             a list of valid configuration dictionary for TARDIS
         """
 
-        return self.lbv.map(self.worker, parameter_set_dicts,
+        return self.lbv.map(self.worker, parameter_set_list,
                             atom_data=atom_data)
 
 
