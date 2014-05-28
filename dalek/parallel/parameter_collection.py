@@ -1,8 +1,10 @@
 import itertools
 import operator
+import logging
 from functools import reduce
 import pandas as pd
 
+logger = logging.getLogger(__name__)
 
 def broadcast(lst, length):
     """Extend a given list so it has the given length by repeating values in it.
@@ -95,16 +97,56 @@ def mul_dictionary_lists(table1, table2):
     return combine_parameter_sets(table1, table2, combiner)    
 
 
-class ParameterCollection2(pd.DataFrame):
+class ParameterCollection(pd.DataFrame):
     @property
     def _constructor(self):
-        return ParameterCollection2
-
-    def to_config_dict_list(self):
-        pass
+        return ParameterCollection
 
 
-class ParameterCollection(object):
+    def cartesian_product(self, other_parameter_collection):
+        """
+        Cartesian product between between this and other Parameter Collection
+
+        Parameters
+        ----------
+        """
+
+        self['key'] = [1] * len(self)
+        other_parameter_collection['key'] = [1] * len(
+            other_parameter_collection)
+
+        cart_product_dataframe = pd.merge(self, other_parameter_collection,
+                                          on='key')
+
+        del self['key']
+        del other_parameter_collection['key']
+
+        return cart_product_dataframe
+
+
+
+    def to_config(self, tardis_configuration):
+        """
+
+        Parameters
+        ----------
+
+        tardis_configuration: tardis.io.ConfigurationNameSpace
+            xxxx
+        """
+        configuration_list = []
+        for i, item in self.iterrows():
+            current_config = tardis_configuration.deepcopy()
+            for key, value in item.to_dict().items():
+                if key.lower().strip().startswith('dalek.'):
+                    logger.debug('Skipping dalek keys')
+                    continue
+                current_config.set_config_item(key, value)
+            configuration_list.append(current_config)
+
+        return configuration_list
+
+class ParameterCollection2(object):
     """A set of parameters -- key/value pairs used for software configuration purposes.
     """
     def __init__(self, params):

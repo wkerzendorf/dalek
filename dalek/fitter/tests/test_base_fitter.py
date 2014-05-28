@@ -1,10 +1,10 @@
 from dalek.fitter import BaseFitter, BaseOptimizer
-from dalek.parallel.parameter_collection import ParameterCollection2
+from dalek.parallel.parameter_collection import ParameterCollection
 import numpy as np
 from collections import OrderedDict
 import pytest
 from IPython.parallel import Client, interactive
-
+from tardis.io.config_reader import ConfigurationNameSpace
 
 try:
     remote_clients = Client()
@@ -21,23 +21,14 @@ pytestmark = pytest.mark.skipif(not ipcluster_available,
                                        ' <number of engines>')
 
 
-class ParameterTestCollection(ParameterCollection2):
-    def to_config_dict_list(self):
-        config_dict_list = []
-        for idx, row in self.iterrows():
-            current_config_dict = row.to_dict()
-            fitness = current_config_dict.pop('fitness')
-            config_dict_list.append(current_config_dict)
-
-        return config_dict_list
-
+default_config = ConfigurationNameSpace({'param' : {}})
 
 class SimpleFitnessFunction(object):
 
     def __call__(self, config_dict):
-        x = config_dict['param.x']
-        y = config_dict['param.y']
-        z = config_dict['param.z']
+        x = config_dict.param.x
+        y = config_dict.param.y
+        z = config_dict.param.z
 
         return self.fit_function(x, y, z)
 
@@ -58,11 +49,11 @@ class SimpleTestOptimizer(BaseOptimizer):
 
     def __call__(self, param_collection):
 
-        if np.any(param_collection.fitness == np.nan):
+        if np.any(param_collection['dalek.fitness'] == np.nan):
             raise ValueError
 
-        max_idx = param_collection.fitness.argmax()
-        param_collection.fitness = np.nan
+        max_idx = param_collection['dalek.fitness'].argmax()
+        param_collection['dalek.fitness'] = np.nan
         new_x = np.random.uniform(*self.x_bounds)
         new_y = np.random.uniform(*self.y_bounds)
         new_z = np.random.uniform(*self.z_bounds)
@@ -81,10 +72,10 @@ class SimpleTestOptimizer(BaseOptimizer):
         z_params = np.random.uniform(self.x_bounds[0], self.x_bounds[1],
                                      self.no_sets_in_collection)
 
-        initial_param_collection = ParameterTestCollection(
+        initial_param_collection = ParameterCollection(
             OrderedDict([('param.x', x_params), ('param.y', y_params),
                         ('param.z', z_params)]))
-        initial_param_collection['fitness'] = np.nan
+        initial_param_collection['dalek.fitness'] = np.nan
         return initial_param_collection
 
 
@@ -117,6 +108,7 @@ class TestSimpleBaseFitter(object):
         self.fitter = BaseFitter(self.simple_test_optimizer,
                                  self.initial_parameters, remote_clients,
                                  self.simple_test_fitness_function,
+                                 default_config=default_config,
                                  atom_data=None, worker=fitter_test_worker)
 
 
@@ -125,19 +117,20 @@ class TestSimpleBaseFitter(object):
 
     def test_initial_parameters(self):
         assert (self.initial_parameters.columns.values.tolist() ==
-                ['param.x', 'param.y', 'param.z', 'fitness'])
+                ['param.x', 'param.y', 'param.z', 'dalek.fitness'])
 
     def test_simple_launcher_evaluation_run(self):
         parameter_collection = self.fitter.evaluate_parameter_collection(
             self.initial_parameters)
-        assert_almost_equal(parameter_collection.fitness[0],
+        assert_almost_equal(parameter_collection['dalek.fitness'][0],
                             self.simple_test_fitness_function(
-                                self.initial_parameters.to_config_dict_list()[0]))
+                                self.initial_parameters.to_config(
+                                    self.fitter.default_config)[0]))
 
     def test_simple_basefitter_fitting(self):
         initial_sum = self.fitter.evaluate_parameter_collection(
-            self.initial_parameters).fitness.sum()
+            self.initial_parameters)['dalek.fitness'].sum()
 
         self.fitter.run_fitter(self.initial_parameters)
 
-        assert self.fitter.current_parameters.fitness.sum() < initial_sum
+        assert self.fitter.current_parameters['dalek.fitness'].sum() < initial_sum
