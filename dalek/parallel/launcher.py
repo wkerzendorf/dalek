@@ -56,7 +56,7 @@ def fitter_worker(config_dict, atom_data=None):
             atom_data = default_atom_data
 
     tardis_config = config_reader.TARDISConfiguration.from_config_dict(config_dict, atom_data=atom_data)
-    radial1d_mdl = model_radial_oned.Radial1DModel(tardis_config)
+    radial1d_mdl = model.Radial1DModel(tardis_config)
     simulation.run_radial1d(radial1d_mdl, history_fname)
 
     return fitness_function(radial1d_mdl)
@@ -93,8 +93,30 @@ class BaseLauncher(object):
 
     @staticmethod
     def prepare_remote_clients(clients, atom_data):
+        """
+        Preparing the remote clients for computation: Uploading the atomic
+        data if available and making sure that the clients can run on different
+        CPUs on each Node
 
-        clients[:]['default_atom_data'] = atom_data
+        Parameters
+        ----------
+
+        clients: IPython.parallel.Client
+            remote clients from ipython
+
+        atom_data: tardis.atomic.AtomData or None
+            remote atomic data, if None each queue needs to bring their own one
+        """
+
+        logger.info('Sending initial atomic dataset to remote '
+                    'clients')
+
+        for client in clients:
+            client['default_atom_data'] = atom_data
+            client.execute('from tardis.io import config_reader')
+            client.execute('from tardis import model, simulation')
+
+
 
         for client in clients:
             client.apply(set_engines_cpu_affinity)
