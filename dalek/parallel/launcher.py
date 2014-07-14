@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 from dalek.parallel.util import set_engines_cpu_affinity
 
 try:
-    from tardis import run_tardis
+    from tardis.core import run_tardis
 except ImportError:
     logger.critical('OLD version of tardis used please upgrade')
     run_tardis = lambda x: x
@@ -28,9 +28,9 @@ def simple_worker(config_dict, atom_data=None):
         else:
             atom_data = default_atom_data
 
-    tardis_config = config_reader.TARDISConfiguration.from_config_dict(config_dict, atom_data=atom_data)
-    radial1d_mdl = model_radial_oned.Radial1DModel(tardis_config)
-    simulation.run_radial1d(radial1d_mdl, history_fname)
+    tardis_config = config_reader.Configuration.from_config_dict(config_dict, atom_data=atom_data)
+    radial1d_mdl = model.Radial1DModel(tardis_config)
+    simulation.run_radial1d(radial1d_mdl)
 
     return radial1d_mdl
 
@@ -55,9 +55,9 @@ def fitter_worker(config_dict, atom_data=None):
         else:
             atom_data = default_atom_data
 
-    tardis_config = config_reader.TARDISConfiguration.from_config_dict(config_dict, atom_data=atom_data)
+    tardis_config = config_reader.Configuration.from_config_dict(config_dict, atom_data=atom_data)
     radial1d_mdl = model.Radial1DModel(tardis_config)
-    simulation.run_radial1d(radial1d_mdl, history_fname)
+    simulation.run_radial1d(radial1d_mdl)
 
     return fitness_function(radial1d_mdl)
 
@@ -109,13 +109,14 @@ class BaseLauncher(object):
         """
 
         logger.info('Sending initial atomic dataset to remote '
-                    'clients')
-
+                    'clients and importing tardis')
+        clients.block = True
         for client in clients:
             client['default_atom_data'] = atom_data
             client.execute('from tardis.io import config_reader')
             client.execute('from tardis import model, simulation')
 
+        clients.block = False
 
 
         for client in clients:
