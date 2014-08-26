@@ -95,7 +95,7 @@ class SimpleRMSFitnessFunction(BaseFitnessFunction):
             synth_spectrum = radial1d_mdl.virtual_spectrum
         except AttributeError:
             synth_spectrum = radial1d_mdl.spectrum
-        synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength.value,
+        synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength,
                                         synth_spectrum.wavelength.value,
                                         synth_spectrum.flux_lambda.value)
         fitness = np.sum((synth_spectrum_flux - self.observed_spectrum_flux) ** 2)
