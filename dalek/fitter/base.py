@@ -28,13 +28,12 @@ class BaseFitter(object):
         fitnesses_result = self.launcher.queue_parameter_set_list(
             config_dict_list)
         print "\n"
-        while True:
+        while fitnesses_result.progress < len(fitnesses_result):
             fitnesses_result.wait(timeout=1)
             sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
                 fitnesses_result.progress, len(fitnesses_result)))
             sys.stdout.flush()
-            if fitnesses_result.progress == len(fitnesses_result):
-                break
+
         parameter_collection['dalek.fitness'] = fitnesses_result.result
 
         return parameter_collection
