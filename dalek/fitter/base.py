@@ -1,20 +1,22 @@
 from abc import ABCMeta, abstractmethod
 from dalek.parallel.launcher import FitterLauncher, fitter_worker
 import numpy as np
+import logging
+import sys
 
+logger = logging.getLogger(__name__)
 
 class BaseFitter(object):
     """
 
     """
 
-    def __init__(self, optimizer, initial_parameters, remote_clients,
+    def __init__(self, optimizer, remote_clients,
                  fitness_function, atom_data, default_config, max_iterations=50,
                  worker=fitter_worker):
 
         self.max_iterations = max_iterations
         self.default_config = default_config
-        self.initial_parameters = initial_parameters
         self.launcher = FitterLauncher(remote_clients,
                                        fitness_function, atom_data,
                                        worker)
@@ -25,7 +27,12 @@ class BaseFitter(object):
         config_dict_list = parameter_collection.to_config(self.default_config)
         fitnesses_result = self.launcher.queue_parameter_set_list(
             config_dict_list)
-        fitnesses_result.wait()
+        print "\n"
+        while True:
+            fitnesses_result.wait(timeout=1)
+            sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
+                fitnesses_result.progress, len(fitnesses_result)))
+            sys.stdout.flush()
         parameter_collection['dalek.fitness'] = fitnesses_result.result
 
         return parameter_collection
