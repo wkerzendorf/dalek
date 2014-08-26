@@ -90,7 +90,10 @@ class SimpleRMSFitnessFunction(BaseFitnessFunction):
         self.observed_spectrum_flux = observed_spectrum_flux
 
     def __call__(self, radial1d_mdl):
-        synth_spectrum = radial1d_mdl.virtual_spectrum
+        try:
+            synth_spectrum = radial1d_mdl.virtual_spectrum
+        except AttributeError:
+            synth_spectrum = radial1d_mdl.spectrum
         synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength, spectrum.wavelength, spectrum.flux)
         fitness = np.sum((synth_spectrum_flux - self.observed_spectrum_flux) ** 2)
         return fitness
