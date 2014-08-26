@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dalek.parallel.launcher import FitterLauncher, fitter_worker
+import numpy as np
 
 
 class BaseFitter(object):
@@ -77,19 +78,16 @@ class BaseFitnessFunction(object):
 
 
 class SimpleRMSFitnessFunction(BaseFitnessFunction):
-    
     def __init__(self, observed_spectrum_wavelength, observed_spectrum_flux):
         self.observed_spectrum_wavelength = observed_spectrum_wavelength
         self.observed_spectrum_flux = observed_spectrum_flux
-    
+
     def __call__(self, radial1d_mdl):
-        # --- here goes the interpolation code ----
         synth_spectrum = radial1d_mdl.virtual_spectrum
         synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength, spectrum.wavelength, spectrum.flux)
-        fitness = np.sum((synth_spectrum_flux - self.observed_spectrum_flux)**2)
+        fitness = np.sum((synth_spectrum_flux - self.observed_spectrum_flux) ** 2)
         return fitness
-        
-
+"""
 class SimpleRandomSearch(BaseOptimizer):
     
     def __init__(self, parameter_names, parameter_bounds, no_parameter_sets, *args, **kwargs):
@@ -112,4 +110,4 @@ class SimpleRandomSearch(BaseOptimizer):
     def init_parameter_collection(self):
         parameters_sets = {'model.abundances.C':[0.2, 0.3, 0.5], 'model.abundances.Fe' : [0.1, 0.3, 0.5]}
         return ParameterCollection(parameter_sets)
-        
+"""
