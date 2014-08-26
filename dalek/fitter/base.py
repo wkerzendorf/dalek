@@ -33,6 +33,8 @@ class BaseFitter(object):
             sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
                 fitnesses_result.progress, len(fitnesses_result)))
             sys.stdout.flush()
+            if fitnesses_result.progress == len(fitnesses_result):
+                break
         parameter_collection['dalek.fitness'] = fitnesses_result.result
 
         return parameter_collection
