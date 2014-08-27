@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from dalek.parallel.launcher import FitterLauncher, fitter_worker
 import numpy as np
 import logging
-import sys
+import sys, os
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class BaseFitter(object):
         config_dict_list = parameter_collection.to_config(self.default_config)
         fitnesses_result = self.launcher.queue_parameter_set_list(
             config_dict_list)
-        print "\n"
+
         while fitnesses_result.progress < len(fitnesses_result):
             fitnesses_result.wait(timeout=1)
             sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
@@ -49,10 +49,9 @@ class BaseFitter(object):
     def run_fitter(self, initial_parameters):
         current_parameters = initial_parameters
         i = 0
-        while True:
-            if i > self.max_iterations:
-                break
-
+        while i < self.max_iterations:
+            logger.info('\nAt iteration {0} of {1}'.format(i,
+                                                         self.max_iterations))
             current_parameters = self.run_single_fitter_iteration(
                 current_parameters)
 
@@ -91,14 +90,18 @@ class SimpleRMSFitnessFunction(BaseFitnessFunction):
         self.observed_spectrum_flux = observed_spectrum_flux
 
     def __call__(self, radial1d_mdl):
-        try:
-            synth_spectrum = radial1d_mdl.virtual_spectrum
-        except AttributeError:
+
+        if radial1d_mdl.spectrum_virtual.flux_nu.sum() > 0:
+            synth_spectrum = radial1d_mdl.spectrum_virtual
+        else:
             synth_spectrum = radial1d_mdl.spectrum
         synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength,
                                         synth_spectrum.wavelength.value,
                                         synth_spectrum.flux_lambda.value)
-        fitness = np.sum((synth_spectrum_flux - self.observed_spectrum_flux) ** 2)
+
+        fitness = np.sum((synth_spectrum_flux -
+                          self.observed_spectrum_flux) ** 2)
+
         return fitness
 """
 class SimpleRandomSearch(BaseOptimizer):
