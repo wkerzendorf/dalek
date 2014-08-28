@@ -28,7 +28,8 @@ def simple_worker(config_dict, atom_data=None):
         else:
             atom_data = default_atom_data
 
-    tardis_config = config_reader.Configuration.from_config_dict(config_dict, atom_data=atom_data)
+    tardis_config = config_reader.Configuration.from_config_dict(
+        config_dict, atom_data=atom_data, validate=False)
     radial1d_mdl = model.Radial1DModel(tardis_config)
     simulation.run_radial1d(radial1d_mdl)
 
@@ -55,7 +56,8 @@ def fitter_worker(config_dict, atom_data=None):
         else:
             atom_data = default_atom_data
 
-    tardis_config = config_reader.Configuration.from_config_dict(config_dict, atom_data=atom_data)
+    tardis_config = config_reader.Configuration.from_config_dict(
+        config_dict, atom_data=atom_data, validate=False)
     radial1d_mdl = model.Radial1DModel(tardis_config)
     simulation.run_radial1d(radial1d_mdl)
 
@@ -163,5 +165,10 @@ class FitterLauncher(BaseLauncher):
                                            atom_data=atom_data)
 
     def prepare_remote_clients(self, clients, atom_data):
+
         super(FitterLauncher, self).prepare_remote_clients(clients, atom_data)
-        clients[:]['fitness_function'] = self.fitness_function
+        clients.block = True
+        for client in clients:
+            client['fitness_function'] = self.fitness_function
+        clients.block = False
+        logger.info('Initial setup complete')
