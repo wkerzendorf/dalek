@@ -103,27 +103,3 @@ class SimpleRMSFitnessFunction(BaseFitnessFunction):
                           self.observed_spectrum_flux) ** 2)
 
         return fitness
-"""
-class SimpleRandomSearch(BaseOptimizer):
-    
-    def __init__(self, parameter_names, parameter_bounds, no_parameter_sets, *args, **kwargs):
-        # parameter_names can be anything like ['model.abundances.C', 'supernova.luminosity_requested', ...]
-        #use this to do certain settings in regards to the optimizer behaviour
-        #e.g. setting which parameters to optimize
-        
-        self.parameter_names = parameter_names
-        self.parameter_bounds = parameter_bounds
-        self.no_parameter_sets = no_parameter_sets
-    
-    def __call__(self, parameter_collection)
-    
-        parameter_collection['model.abundances.Fe'] -> array
-        parameter_collection['dalek.fitness'] -> 
-        # generate the next parameter collection
-        new_parameter_collection = generate(parameter_collection)
-        return new_parameter_collection
-    
-    def init_parameter_collection(self):
-        parameters_sets = {'model.abundances.C':[0.2, 0.3, 0.5], 'model.abundances.Fe' : [0.1, 0.3, 0.5]}
-        return ParameterCollection(parameter_sets)
-"""
