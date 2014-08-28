@@ -7,7 +7,28 @@ import sys, os
 logger = logging.getLogger(__name__)
 
 class ParameterSetConfiguration(object):
-    pass
+    """
+    Storing the names and bounds of the parameters
+
+    Parameters
+    ----------
+
+    parameter_names: ~list
+        list of strings of parameter names
+
+    parameter_lower_bounds: ~list or ~np.ndarray
+
+    parameter_upper_bounds: ~list or ~np.ndarray
+    """
+    def __init__(self, parameter_names, parameter_lower_bounds,
+                 parameter_upper_bounds):
+        self.parameter_names = parameter_names
+        self.parameter_lower_bounds = parameter_lower_bounds
+        self.parameter_upper_bounds = parameter_upper_bounds
+        assert (len(parameter_upper_bounds) == len(parameter_lower_bounds)
+                == len(parameter_names))
+
+
 
 class BaseFitter(object):
     """
@@ -15,7 +36,9 @@ class BaseFitter(object):
     """
 
     def __init__(self, optimizer, remote_clients,
-                 fitness_function, atom_data, default_config, max_iterations=50,
+                 fitness_function, atom_data, default_config,
+                 parameter_set_configuration, db_string=None,
+                 max_iterations=50,
                  worker=fitter_worker):
 
         self.max_iterations = max_iterations
@@ -24,6 +47,13 @@ class BaseFitter(object):
                                        fitness_function, atom_data,
                                        worker)
         self.optimizer = optimizer
+
+        if dbstring is not None:
+            self.open_db(db_string)
+
+
+    def open_db(self, db_string):
+        pass
 
 
     def evaluate_parameter_collection(self, parameter_collection):
