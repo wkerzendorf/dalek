@@ -6,6 +6,9 @@ import sys, os
 
 logger = logging.getLogger(__name__)
 
+class ParameterSetConfiguration(object):
+    pass
+
 class BaseFitter(object):
     """
 
