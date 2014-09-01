@@ -1,12 +1,17 @@
 from abc import ABCMeta, abstractmethod
 from dalek.parallel.launcher import FitterLauncher, fitter_worker
 import numpy as np
+import pandas as pd
 import logging
 import sys, os
+import sqlalchemy
+
+from dalek.parallel.parameter_collection import ParameterCollection
+
 
 logger = logging.getLogger(__name__)
 
-class ParameterSetConfiguration(object):
+class FitterConfiguration(object):
     """
     Storing the names and bounds of the parameters
 
@@ -19,41 +24,116 @@ class ParameterSetConfiguration(object):
     parameter_lower_bounds: ~list or ~np.ndarray
 
     parameter_upper_bounds: ~list or ~np.ndarray
-    """
-    def __init__(self, parameter_names, parameter_lower_bounds,
-                 parameter_upper_bounds):
-        self.parameter_names = parameter_names
-        self.parameter_lower_bounds = parameter_lower_bounds
-        self.parameter_upper_bounds = parameter_upper_bounds
-        assert (len(parameter_upper_bounds) == len(parameter_lower_bounds)
-                == len(parameter_names))
 
+    parameter_types: ~list of ~str
+        list of allowed sqlalchemy parameter types (i.e. integer, float, string)
+
+    default_config: ~tardis.io.config_reader.ConfigurationNameSpace
+        the default config
+    """
+
+    fitter_parameter_names = ['dalek.id', 'dalek.iteration', 'dalek.fitness']
+    fitter_parameter_types = [sqlalchemy.Integer, sqlalchemy.Integer,
+                              sqlalchemy.Float]
+
+    @classmethod
+    def from_yaml(cls):
+        pass
+
+    def __init__(self, parameter_names, parameter_bounds, default_config,
+                 atom_data, number_of_samples, max_iterations=50):
+        self.parameter_names = parameter_names
+        self.parameter_bounds = np.array(parameter_bounds)
+
+        assert len(parameter_bounds) == len(parameter_names)
+
+        self.default_config = default_config
+        self.max_iterations = max_iterations
+        self.atom_data = atom_data
+        self.number_of_samples = number_of_samples
+
+    @property
+    def lbounds(self):
+        return self.parameter_bounds[:,0]
+
+    @property
+    def ubounds(self):
+        return self.parameter_bounds[:,1]
+
+    @property
+    def all_parameter_names(self):
+        return self.parameter_names + self.fitter_parameter_names
+
+    @property
+    def all_parameter_types(self):
+        return self.parameter_types + self.fitter_parameter_types
+
+    def get_initial_parameter_collection(self, number_of_samples=None):
+        """
+        Generate initial ParameterCollection
+
+        Returns
+        -------
+
+        initial_parameter_collection : ~dalek.parallel.ParameterCollection
+
+
+        """
+
+        if number_of_samples is None:
+            number_of_samples = self.number_of_samples
+        initial_data = np.array([np.random.uniform(lbound, ubound,
+                                          size=number_of_samples)
+                        for lbound, ubound in self.parameter_bounds])
+        return ParameterCollection(initial_data.T, columns=self.parameter_names)
+
+"""
+    def get_alchemy_table(self, metadata, table_name='dalek_parameter_sets',
+                          name_mangling=lambda column_string:
+                          column_string.replace('.', '__')):
+
+        ""
+        Generate a sqlalchemy table structure
+
+        Parameters
+        ----------
+
+        table_name: ~str
+            string of table name
+
+        metadata
+        ""
+        columns = [Column('id', Integer, primary_key=True)]
+        columns += [Column(name_mangling(column_name), column_type)
+                    for column_name, column_type in
+                    zip(self.all_parameter_names, self.all_parameter_types)]
+
+        return Table(table_name, metadata, *columns)
+
+"""
 
 
 class BaseFitter(object):
     """
+    Basic fitter class for Dalek
+
+    Parameters
+    ----------
+
 
     """
 
-    def __init__(self, optimizer, remote_clients,
-                 fitness_function, atom_data, default_config,
-                 parameter_set_configuration, db_string=None,
-                 max_iterations=50,
+    def __init__(self, remote_clients, optimizer, fitness_function,
+                 fitter_configuration, data_store=None,
                  worker=fitter_worker):
 
-        self.max_iterations = max_iterations
-        self.default_config = default_config
-        self.launcher = FitterLauncher(remote_clients,
-                                       fitness_function, atom_data,
-                                       worker)
-        self.optimizer = optimizer
+        self.fitter_configuration = fitter_configuration
+        self.default_config = fitter_configuration.default_config
 
-        if dbstring is not None:
-            self.open_db(db_string)
+        self.launcher = FitterLauncher(remote_clients, fitness_function,
+                                       fitter_configuration.atom_data, worker)
+        self.optimizer = optimizer(fitter_configuration)
 
-
-    def open_db(self, db_string):
-        pass
 
 
     def evaluate_parameter_collection(self, parameter_collection):
@@ -82,9 +162,11 @@ class BaseFitter(object):
     def run_fitter(self, initial_parameters):
         current_parameters = initial_parameters
         i = 0
-        while i < self.max_iterations:
+        while i < self.fitter_configuration.max_iterations:
             logger.info('\nAt iteration {0} of {1}'.format(i,
-                                                         self.max_iterations))
+                                                           self.
+                                                           fitter_configuration.
+                                                           max_iterations))
             current_parameters = self.run_single_fitter_iteration(
                 current_parameters)
 
