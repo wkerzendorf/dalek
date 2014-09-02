@@ -41,7 +41,8 @@ class FitterConfiguration(object):
         pass
 
     def __init__(self, parameter_names, parameter_bounds, default_config,
-                 atom_data, number_of_samples, max_iterations=50):
+                 atom_data, number_of_samples, max_iterations=50,
+                 generate_initial_parameter_collection=None):
         self.parameter_names = parameter_names
         self.parameter_bounds = np.array(parameter_bounds)
 
@@ -51,6 +52,8 @@ class FitterConfiguration(object):
         self.max_iterations = max_iterations
         self.atom_data = atom_data
         self.number_of_samples = number_of_samples
+        self.generate_initial_parameter_collection = \
+            generate_initial_parameter_collection
 
     @property
     def lbounds(self):
@@ -82,6 +85,10 @@ class FitterConfiguration(object):
 
         if number_of_samples is None:
             number_of_samples = self.number_of_samples
+
+        if self.generate_initial_parameter_collection is not None:
+            return self.generate_initial_parameter_collection(number_of_samples=
+                                                              number_of_samples)
         initial_data = np.array([np.random.uniform(lbound, ubound,
                                           size=number_of_samples)
                         for lbound, ubound in self.parameter_bounds])
