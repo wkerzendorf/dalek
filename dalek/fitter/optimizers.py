@@ -20,16 +20,22 @@ class LuusJaakolaOptimizer(BaseOptimizer):
     def __call__(self, parameter_collection):
         current_best_fit = parameter_collection.ix[
             parameter_collection['dalek.fitness'].argmin()]
-        temp_parameter_collection = ParameterCollection(columns=self.fitter_configuration.parameter_names)
+        temp_parameter_collection = ParameterCollection(
+            columns=self.fitter_configuration.parameter_names)
         
-        for i, param_name in enumerate(self.fitter_configuration.parameter_names):
+        for i, param_name in enumerate(
+                self.fitter_configuration.parameter_names):
             
-            temp_parameter_collection[param_name] = np.random.uniform(max(-self.d[i] + current_best_fit.values[i], 
-                                  self.fitter_configuration.lbounds[i]),
-                              min(self.d[i] + current_best_fit.values[i], 
-                                  self.fitter_configuration.ubounds[i]), 
-                              size=self.n - 1)
-        new_parameter_collection = ParameterCollection(current_best_fit.values[None], columns=parameter_collection.columns).append(temp_parameter_collection, ignore_index=True)
+            temp_parameter_collection[param_name] =\
+                np.random.uniform(max(-self.d[i] + current_best_fit.values[i], 
+                                      self.fitter_configuration.lbounds[i]),
+                                  min(self.d[i] + current_best_fit.values[i], 
+                                      self.fitter_configuration.ubounds[i]), 
+                                  size=self.n - 1)
+        new_parameter_collection = ParameterCollection(
+            current_best_fit.values[None],
+            columns=parameter_collection.columns).append(
+            temp_parameter_collection, ignore_index=True)
         self.d *= 0.95
         return new_parameter_collection
 
