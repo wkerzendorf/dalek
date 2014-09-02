@@ -34,9 +34,6 @@ class FitterConfiguration(object):
     generate_initial_paramater_collection:
     """
 
-    fitter_parameter_names = ['dalek.id', 'dalek.iteration', 'dalek.fitness']
-    fitter_parameter_types = [sqlalchemy.Integer, sqlalchemy.Integer,
-                              sqlalchemy.Float]
 
     @classmethod
     def from_yaml(cls):
