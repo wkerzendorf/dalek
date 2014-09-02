@@ -30,6 +30,8 @@ class FitterConfiguration(object):
 
     default_config: ~tardis.io.config_reader.ConfigurationNameSpace
         the default config
+
+    generate_initial_paramater_collection:
     """
 
     fitter_parameter_names = ['dalek.id', 'dalek.iteration', 'dalek.fitness']
@@ -131,7 +133,7 @@ class BaseFitter(object):
     """
 
     def __init__(self, remote_clients, optimizer, fitness_function,
-                 fitter_configuration, data_store=None,
+                 fitter_configuration, parameter_log=None,
                  worker=fitter_worker):
 
         self.fitter_configuration = fitter_configuration
@@ -140,6 +142,9 @@ class BaseFitter(object):
         self.launcher = FitterLauncher(remote_clients, fitness_function,
                                        fitter_configuration.atom_data, worker)
         self.optimizer = optimizer(fitter_configuration)
+        
+        self.big_parameter_collection = None
+        self.parameter_log = parameter_log
 
 
 
@@ -162,25 +167,31 @@ class BaseFitter(object):
     def run_single_fitter_iteration(self, parameter_collection):
         evaluated_parameter_collection = self.evaluate_parameter_collection(
             parameter_collection)
+        if self.big_parameter_collection is None:
+            self.big_parameter_collection = evaluated_parameter_collection.copy()
+        else:
+            self.big_parameter_collection = self.big_parameter_collection.append(evaluated_paramter_collection, ignore_index=True)
         new_parameter_collection = self.optimizer(
             evaluated_parameter_collection)
         return new_parameter_collection
 
     def run_fitter(self, initial_parameters):
         current_parameters = initial_parameters
+
         i = 0
         while i < self.fitter_configuration.max_iterations:
             logger.info('\nAt iteration {0} of {1}'.format(i,
                                                            self.
                                                            fitter_configuration.
                                                            max_iterations))
-            current_parameters = self.run_single_fitter_iteration(
+            self.current_parameters = self.run_single_fitter_iteration(
                 current_parameters)
+            if self.parameter_log is not None:
+                self.big_parameter_collection.to_csv(self.parameter_log)
 
             i += 1
-        self.current_parameters = self.evaluate_parameter_collection(
-            current_parameters)
-
+        
+            
 
 
 
