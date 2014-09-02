@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import logging
 import sys, os
-import sqlalchemy
+
 
 from dalek.parallel.parameter_collection import ParameterCollection
 
