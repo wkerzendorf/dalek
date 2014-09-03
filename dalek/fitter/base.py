@@ -155,8 +155,9 @@ class BaseFitter(object):
             sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
                 fitnesses_result.progress, len(fitnesses_result)))
             sys.stdout.flush()
-
-        parameter_collection['dalek.fitness'] = fitnesses_result.result
+        fitnesses = zip(*fitnesses_result.result)[0]
+        self.spectra = zip(*fitnesses_result.result)[1]
+        parameter_collection['dalek.fitness'] = fitnesses
 
         return parameter_collection
 
@@ -167,7 +168,8 @@ class BaseFitter(object):
         if self.big_parameter_collection is None:
             self.big_parameter_collection = evaluated_parameter_collection.copy()
         else:
-            self.big_parameter_collection = self.big_parameter_collection.append(evaluated_paramter_collection, ignore_index=True)
+            self.big_parameter_collection = self.big_parameter_collection.append(
+                evaluated_paramter_collection, ignore_index=True)
         new_parameter_collection = self.optimizer(
             evaluated_parameter_collection)
         return new_parameter_collection
@@ -226,10 +228,10 @@ class SimpleRMSFitnessFunction(BaseFitnessFunction):
         else:
             synth_spectrum = radial1d_mdl.spectrum
         synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength,
-                                        synth_spectrum.wavelength.value,
-                                        synth_spectrum.flux_lambda.value)
+                                        synth_spectrum.wavelength.value[::-1],
+                                        synth_spectrum.flux_lambda.value[::-1])
 
         fitness = np.sum((synth_spectrum_flux -
                           self.observed_spectrum_flux) ** 2)
 
-        return fitness
+        return fitness, synth_spectrum

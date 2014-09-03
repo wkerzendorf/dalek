@@ -61,7 +61,9 @@ def fitter_worker(config_dict, atom_data=None):
     radial1d_mdl = model.Radial1DModel(tardis_config)
     simulation.run_radial1d(radial1d_mdl)
 
-    return fitness_function(radial1d_mdl)
+    fitness, spectrum = fitness_function(radial1d_mdl)
+
+    return fitness, spectrum
 
 class BaseLauncher(object):
     """
