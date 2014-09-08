@@ -169,7 +169,7 @@ class BaseFitter(object):
             self.big_parameter_collection = evaluated_parameter_collection.copy()
         else:
             self.big_parameter_collection = self.big_parameter_collection.append(
-                evaluated_paramter_collection, ignore_index=True)
+                evaluated_parameter_collection, ignore_index=True)
         new_parameter_collection = self.optimizer(
             evaluated_parameter_collection)
         return new_parameter_collection
