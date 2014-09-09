@@ -175,7 +175,7 @@ class BaseFitter(object):
         return new_parameter_collection
 
     def run_fitter(self, initial_parameters):
-        current_parameters = initial_parameters
+        self.current_parameters = initial_parameters
 
         i = 0
         while i < self.fitter_configuration.max_iterations:
@@ -184,7 +184,7 @@ class BaseFitter(object):
                                                            fitter_configuration.
                                                            max_iterations))
             self.current_parameters = self.run_single_fitter_iteration(
-                current_parameters)
+                self.current_parameters)
             if self.parameter_log is not None:
                 self.big_parameter_collection.to_csv(self.parameter_log)
 
