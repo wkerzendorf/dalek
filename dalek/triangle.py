@@ -1,1 +1,1 @@
-triangle/triangle.py
+../triangle/triangle.py
