@@ -1,0 +1,3 @@
+[submodule "dalek/triangle"]
+	path = dalek/triangle
+	url = https://github.com/dfm/triangle.py
