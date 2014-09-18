@@ -17,6 +17,7 @@ class BaseOptimizer(object):
 
 class RandomSampling(BaseOptimizer):
     def __init__(self, fitter_configuration):
+        raise NotImplementedError
         self.fitter_configuration = fitter_configuration
         self.lbounds = self.fitter_configuration.lbounds
         self.ubounds = self.fitter_configuration.ubounds
@@ -30,6 +31,7 @@ class RandomSampling(BaseOptimizer):
 
 class NoiseMeasurement(BaseOptimizer):
     def __init__(self, fitter_configuration):
+        raise NotImplementedError
         self.fitter_configuration = fitter_configuration
         self.n = self.fitter_configuration.number_of_samples
 
@@ -38,35 +40,38 @@ class NoiseMeasurement(BaseOptimizer):
         return ParameterCollection(np.array(parameters), columns=['montecarlo.seed'])
 
 class LuusJaakolaOptimizer(BaseOptimizer):
-    def __init__(self, fitter_configuration):
-        self.fitter_configuration = fitter_configuration
-        self.x = (self.fitter_configuration.lbounds +
-                  self.fitter_configuration.ubounds) * 0.5
-        self.n = fitter_configuration.number_of_samples
-        self.d = np.array(self.fitter_configuration.ubounds -
-                          self.fitter_configuration.lbounds) * 0.5
+    def __init__(self, parameter_conf, number_of_samples, **kwargs):
+        self.parameter_config = parameter_conf
+        self.x = (self.parameter_config.lbounds +
+                  self.parameter_config.ubounds) * 0.5
+        self.n = number_of_samples
+        self.d = np.array(self.parameter_config.ubounds -
+                          self.parameter_config.lbounds) * 0.5
 
     def __call__(self, parameter_collection):
         best_fit = parameter_collection.ix[parameter_collection['dalek.fitness'].argmin()]
         best_x = best_fit.values[:-1]
         new_parameters = [best_x]
-        lbounds = self.fitter_configuration.lbounds
-        ubounds = self.fitter_configuration.ubounds
+        lbounds = self.parameter_config.lbounds
+        ubounds = self.parameter_config.ubounds
         for _ in range(self.n):
-            new_parameters.append(np.random.uniform(np.clip(best_x - self.d, lbounds, ubounds),
-                                                    np.clip(best_x + self.d, lbounds, ubounds)))
+            new_parameters.append(np.random.uniform(np.clip(best_x - self.d,
+                                                            lbounds, ubounds),
+                                                    np.clip(best_x + self.d,
+                                                            lbounds, ubounds)))
         self.d *= 0.95
-        return ParameterCollection(np.array(new_parameters), columns=self.fitter_configuration.parameter_names)
+        return ParameterCollection(np.array(new_parameters),
+                                   columns=self.parameter_config.parameter_names)
 
 class DEOptimizer(BaseOptimizer):
-    def __init__(self, fitter_configuration):
-        self.fitter_configuration = fitter_configuration
+    def __init__(self, parameter_conf, number_of_samples, **kwargs):
         self.population = None
-        self.cr = self.fitter_configuration.optimizer_configuration.get('cr', 0.9)
-        self.f = self.fitter_configuration.optimizer_configuration.get('f', 0.5)
-        self.n = fitter_configuration.number_of_samples
-        self.lbounds = np.array(self.fitter_configuration.lbounds)
-        self.ubounds = np.array(self.fitter_configuration.ubounds)
+        self.parameter_config = parameter_conf
+        self.cr = kwargs.get('cr', 0.9)
+        self.f = kwargs.get('f', 0.5)
+        self.n = number_of_samples
+        self.lbounds = np.array(self.parameter_config.lbounds)
+        self.ubounds = np.array(self.parameter_config.ubounds)
 
     def violates_bounds(self, x):
         return any(x < self.lbounds) or any(x > self.ubounds)
@@ -95,21 +100,22 @@ class DEOptimizer(BaseOptimizer):
                     candidates[index][j] = x
             if self.violates_bounds(candidates[index]):
                 candidates[index] = np.array(vector[:-1])
-	params = ParameterCollection(np.array(candidates), columns=self.fitter_configuration.parameter_names)
+	params = ParameterCollection(np.array(candidates),
+                                 columns=self.parameter_config.parameter_names)
 	return params
 
 class PSOOptimizerGbest(BaseOptimizer):
-    def __init__(self, fitter_configuration):
-        self.fitter_configuration = fitter_configuration
+    def __init__(self, parameter_conf, number_of_samples, **kwargs):
+        self.parameter_config = parameter_conf
         self.x = None
         self.px = None
         self.v = None
         self.c1 = 2.05
         self.c2 = 2.05
         self.chi = 2.0 / (self.c1 + self.c2 - 2.0 + np.sqrt((self.c1 + self.c2) ** 2 - 4.0 * (self.c1 + self.c2)))
-        self.n = fitter_configuration.number_of_samples
-        self.lbounds = np.array(self.fitter_configuration.lbounds)
-        self.ubounds = np.array(self.fitter_configuration.ubounds)        
+        self.n = number_of_samples
+        self.lbounds = np.array(self.parameter_config.lbounds)
+        self.ubounds = np.array(self.parameter_config.ubounds)
 
     def neighbourhood(self, index):
         return [i for i in range(self.n) if i != index]
@@ -147,7 +153,8 @@ class PSOOptimizerGbest(BaseOptimizer):
             else:
                 candidates[index] = np.array(self.px[index])
         self.x += self.v
-        params = ParameterCollection(candidates, columns=self.fitter_configuration.parameter_names)
+        params = ParameterCollection(
+            candidates, columns=self.parameter_config.parameter_names)
         return params
         
 

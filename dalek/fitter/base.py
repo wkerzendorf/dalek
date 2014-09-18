@@ -99,15 +99,12 @@ class FitterConfiguration(object):
         ----------
         
         """
-        # usage example:
+
         conf_dict = yaml.load(open(fname), OrderedDictYAMLLoader)
         default_config = ConfigurationNameSpace.from_yaml(
             conf_dict['tardis']['default_conf'])
         atom_data = AtomData.from_hdf5(conf_dict['tardis']['atom_data'])
-
-        parameter_names = conf_dict['fitter']['parameters'].keys()
-        parameter_bounds = [conf_dict['fitter']['parameters'][param]['bounds']
-                            for param in parameter_names]
+        parameter_config = ParameterConfiguration.from_conf_dict(conf_dict['fitter']['parameters'])
 
         number_of_samples = conf_dict['fitter']['number_of_samples']
         max_iterations = conf_dict['fitter']['max_iterations']
@@ -119,8 +116,8 @@ class FitterConfiguration(object):
         fitness_function = fitness_function_class.from_config_dict(
             fitness_function_dict)
 
-        return cls(optimizer, fitness_function, parameter_names=parameter_names,
-                   parameter_bounds=parameter_bounds,
+        return cls(optimizer, fitness_function,
+                   parameter_config=parameter_config,
                    default_config=default_config, atom_data=atom_data,
                    number_of_samples=number_of_samples,
                    max_iterations=max_iterations)
@@ -130,16 +127,12 @@ class FitterConfiguration(object):
         
         
 
-    def __init__(self, optimizer, fitness_function, parameter_names, parameter_bounds, default_config,
+    def __init__(self, optimizer, fitness_function, parameter_config, default_config,
                  atom_data, number_of_samples, max_iterations=50,
                  generate_initial_parameter_collection=None, optimizer_config={}):
         self.optimizer = optimizer
         self.fitness_function = fitness_function
-
-        self.parameter_names = parameter_names
-        self.parameter_bounds = np.array(parameter_bounds)
-
-        assert len(parameter_bounds) == len(parameter_names)
+        self.parameter_config = parameter_config
 
         self.default_config = default_config
         self.max_iterations = max_iterations
@@ -149,13 +142,6 @@ class FitterConfiguration(object):
             generate_initial_parameter_collection
         self.optimizer_config = optimizer_config
 
-    @property
-    def lbounds(self):
-        return self.parameter_bounds[:,0]
-
-    @property
-    def ubounds(self):
-        return self.parameter_bounds[:,1]
 
     @property
     def all_parameter_names(self):
@@ -188,30 +174,43 @@ class FitterConfiguration(object):
                         for lbound, ubound in self.parameter_bounds])
         return ParameterCollection(initial_data.T, columns=self.parameter_names)
 
-"""
-    def get_alchemy_table(self, metadata, table_name='dalek_parameter_sets',
-                          name_mangling=lambda column_string:
-                          column_string.replace('.', '__')):
 
-        ""
-        Generate a sqlalchemy table structure
 
-        Parameters
-        ----------
+class ParameterConfiguration(object):
+    """
+    Configuration of the different Parameters
 
-        table_name: ~str
-            string of table name
+    Parameters
+    ----------
 
-        metadata
-        ""
-        columns = [Column('id', Integer, primary_key=True)]
-        columns += [Column(name_mangling(column_name), column_type)
-                    for column_name, column_type in
-                    zip(self.all_parameter_names, self.all_parameter_types)]
+    parameter_names: ~list of ~str
 
-        return Table(table_name, metadata, *columns)
+    parameter_bounds: ~list of ~tuple
 
-"""
+
+    """
+    @classmethod
+    def from_conf_dict(cls, parameter_conf_dict):
+        parameter_names = parameter_conf_dict.keys()
+        parameter_bounds = [parameter_conf_dict[param]['bounds']
+                            for param in parameter_names]
+        return cls(parameter_names, parameter_bounds)
+
+    def __init__(self, parameter_names, parameter_bounds):
+
+        self.parameter_names = parameter_names
+        self.parameter_bounds = np.array(parameter_bounds)
+
+        assert len(parameter_bounds) == len(parameter_names)
+
+
+    @property
+    def lbounds(self):
+        return self.parameter_bounds[:,0]
+
+    @property
+    def ubounds(self):
+        return self.parameter_bounds[:,1]
 
 
 class BaseFitter(object):
