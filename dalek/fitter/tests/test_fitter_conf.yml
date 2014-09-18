@@ -13,10 +13,10 @@ fitter:
     number_of_samples: 50
     max_iterations: 500
     optimizer:
-        name: luus_jaakola
+        name: devolution
         f: 0.5
         cr: 0.9
 
     fitness_function:
         name: simple_rms
-        spectrum: myspec.dat
+        spectrum: dalek/fitter/tests/myspec.dat

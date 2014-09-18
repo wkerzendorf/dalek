@@ -110,11 +110,10 @@ class FitterConfiguration(object):
         max_iterations = conf_dict['fitter']['max_iterations']
         optimizer_dict = conf_dict['fitter'].pop('optimizer')
         optimizer = all_optimizer_dict[optimizer_dict.pop('name')]
-        fitness_function_dict = optimizer['fitter'].pop('fitness_function')
+        fitness_function_dict = conf_dict['fitter'].pop('fitness_function')
         fitness_function_class = all_fitness_function_dict[
             fitness_function_dict.pop('name')]
-        fitness_function = fitness_function_class.from_config_dict(
-            fitness_function_dict)
+        fitness_function = fitness_function_class(**fitness_function_dict)
 
         return cls(optimizer, fitness_function,
                    parameter_config=parameter_config,
@@ -130,6 +129,7 @@ class FitterConfiguration(object):
     def __init__(self, optimizer, fitness_function, parameter_config, default_config,
                  atom_data, number_of_samples, max_iterations=50,
                  generate_initial_parameter_collection=None, optimizer_config={}):
+
         self.optimizer = optimizer
         self.fitness_function = fitness_function
         self.parameter_config = parameter_config

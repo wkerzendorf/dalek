@@ -1,4 +1,7 @@
 from abc import ABCMeta, abstractmethod
+import numpy as np
+from specutils import Spectrum1D
+from astropy import units as u, constants as const
 
 class BaseFitnessFunction(object):
     __metaclass__ = ABCMeta
@@ -10,17 +13,29 @@ class BaseFitnessFunction(object):
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
+    def get_spectrum(self, spectrum):
+        """
+        Function to make a spectrum out of a filename
+        :param spectrum:
+        :return:
+        """
+
 
 class SimpleRMSFitnessFunction(BaseFitnessFunction):
 
-    @classmethod
-    def from_config_dict(cls, conf_dict):
-        pass
+    def __init__(self, spectrum):
 
-    def __init__(self, observed_spectrum):
-        self.observed_spectrum = observed_spectrum
-        self.observed_spectrum_wavelength = observed_spectrum.wavelength
-        self.observed_spectrum_flux = observed_spectrum.flux
+        if hasattr(spectrum, '.flux'):
+            self.observed_spectrum = spectrum
+        else:
+            wave, flux = np.loadtxt(spectrum, unpack=True)
+            self.observed_spectrum = Spectrum1D.from_array(wave * u.angstrom,
+                                                           flux * u.erg / u.s /
+                                                           u.cm**2 / u.Angstrom)
+
+
+        self.observed_spectrum_wavelength = self.observed_spectrum.wavelength.value
+        self.observed_spectrum_flux = self.observed_spectrum.flux.value
 
     def __call__(self, radial1d_mdl):
 
