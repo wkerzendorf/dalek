@@ -1,7 +1,19 @@
-from dalek.fitter import BaseOptimizer
+from abc import ABCMeta, abstractmethod
+
 from dalek.parallel import ParameterCollection
 import numpy as np
 import random
+
+class BaseOptimizer(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        pass
+
 
 class RandomSampling(BaseOptimizer):
     def __init__(self, fitter_configuration):
@@ -50,8 +62,8 @@ class DEOptimizer(BaseOptimizer):
     def __init__(self, fitter_configuration):
         self.fitter_configuration = fitter_configuration
         self.population = None
-        self.cr = 0.9
-        self.f = 0.5
+        self.cr = self.fitter_configuration.optimizer_configuration.get('cr', 0.9)
+        self.f = self.fitter_configuration.optimizer_configuration.get('f', 0.5)
         self.n = fitter_configuration.number_of_samples
         self.lbounds = np.array(self.fitter_configuration.lbounds)
         self.ubounds = np.array(self.fitter_configuration.ubounds)
@@ -138,3 +150,8 @@ class PSOOptimizerGbest(BaseOptimizer):
         params = ParameterCollection(candidates, columns=self.fitter_configuration.parameter_names)
         return params
         
+
+optimizer_dict = {'random_sampling': RandomSampling,
+                  'luus_jaakola': LuusJaakolaOptimizer,
+                  'devolution': DEOptimizer,
+                  'pso': PSOOptimizerGbest}

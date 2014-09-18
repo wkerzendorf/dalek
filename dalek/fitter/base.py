@@ -1,15 +1,70 @@
 from abc import ABCMeta, abstractmethod
 from dalek.parallel.launcher import FitterLauncher, fitter_worker
+from dalek.fitter.optimizers import optimizer_dict as all_optimizer_dict
+from dalek.fitter.fitness_function import fitness_function_dict as all_fitness_function_dict
 import numpy as np
-import pandas as pd
+from tardis.io.config_reader import ConfigurationNameSpace
+from tardis.atomic import AtomData
 import logging
 import sys, os
+import yaml
+from collections import OrderedDict
 
 
 from dalek.parallel.parameter_collection import ParameterCollection
 
 
 logger = logging.getLogger(__name__)
+
+
+import yaml
+import yaml.constructor
+
+try:
+    # included in standard lib from Python 2.7
+    from collections import OrderedDict
+except ImportError:
+    # try importing the backported drop-in replacement
+    # it's available on PyPI
+    from ordereddict import OrderedDict
+
+class OrderedDictYAMLLoader(yaml.Loader):
+    """
+    A YAML loader that loads mappings into ordered dictionaries.
+    """
+
+    def __init__(self, *args, **kwargs):
+        yaml.Loader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
+        self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+
+    def construct_yaml_map(self, node):
+        data = OrderedDict()
+        yield data
+        value = self.construct_mapping(node)
+        data.update(value)
+
+    def construct_mapping(self, node, deep=False):
+        if isinstance(node, yaml.MappingNode):
+            self.flatten_mapping(node)
+        else:
+            raise yaml.constructor.ConstructorError(None, None,
+                'expected a mapping node, but found %s' % node.id, node.start_mark)
+
+        mapping = OrderedDict()
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                hash(key)
+            except TypeError, exc:
+                raise yaml.constructor.ConstructorError('while constructing a mapping',
+                    node.start_mark, 'found unacceptable key (%s)' % exc, key_node.start_mark)
+            value = self.construct_object(value_node, deep=deep)
+            mapping[key] = value
+        return mapping
+
+
 
 class FitterConfiguration(object):
     """
@@ -36,12 +91,51 @@ class FitterConfiguration(object):
 
 
     @classmethod
-    def from_yaml(cls):
-        pass
+    def from_yaml(cls, fname):
+        """
+        Reading the fitter configuration from a yaml file
+        
+        Parameters
+        ----------
+        
+        """
+        # usage example:
+        conf_dict = yaml.load(open(fname), OrderedDictYAMLLoader)
+        default_config = ConfigurationNameSpace.from_yaml(
+            conf_dict['tardis']['default_conf'])
+        atom_data = AtomData.from_hdf5(conf_dict['tardis']['atom_data'])
 
-    def __init__(self, parameter_names, parameter_bounds, default_config,
+        parameter_names = conf_dict['fitter']['parameters'].keys()
+        parameter_bounds = [conf_dict['fitter']['parameters'][param]['bounds']
+                            for param in parameter_names]
+
+        number_of_samples = conf_dict['fitter']['number_of_samples']
+        max_iterations = conf_dict['fitter']['max_iterations']
+        optimizer_dict = conf_dict['fitter'].pop('optimizer')
+        optimizer = all_optimizer_dict[optimizer_dict.pop('name')]
+        fitness_function_dict = optimizer['fitter'].pop('fitness_function')
+        fitness_function_class = all_fitness_function_dict[
+            fitness_function_dict.pop('name')]
+        fitness_function = fitness_function_class.from_config_dict(
+            fitness_function_dict)
+
+        return cls(optimizer, fitness_function, parameter_names=parameter_names,
+                   parameter_bounds=parameter_bounds,
+                   default_config=default_config, atom_data=atom_data,
+                   number_of_samples=number_of_samples,
+                   max_iterations=max_iterations)
+
+
+
+        
+        
+
+    def __init__(self, optimizer, fitness_function, parameter_names, parameter_bounds, default_config,
                  atom_data, number_of_samples, max_iterations=50,
-                 generate_initial_parameter_collection=None):
+                 generate_initial_parameter_collection=None, optimizer_config={}):
+        self.optimizer = optimizer
+        self.fitness_function = fitness_function
+
         self.parameter_names = parameter_names
         self.parameter_bounds = np.array(parameter_bounds)
 
@@ -53,6 +147,7 @@ class FitterConfiguration(object):
         self.number_of_samples = number_of_samples
         self.generate_initial_parameter_collection = \
             generate_initial_parameter_collection
+        self.optimizer_config = optimizer_config
 
     @property
     def lbounds(self):
@@ -129,16 +224,18 @@ class BaseFitter(object):
 
     """
 
-    def __init__(self, remote_clients, optimizer, fitness_function,
+    def __init__(self, remote_clients,
                  fitter_configuration, parameter_log=None,
                  worker=fitter_worker):
 
         self.fitter_configuration = fitter_configuration
         self.default_config = fitter_configuration.default_config
 
-        self.launcher = FitterLauncher(remote_clients, fitness_function,
-                                       fitter_configuration.atom_data, worker)
-        self.optimizer = optimizer(fitter_configuration)
+        self.launcher = FitterLauncher(
+            remote_clients, self.fitter_configuration.fitness_function,
+            fitter_configuration.atom_data, worker)
+
+        self.optimizer = self.fitter_configuration.optimizer
         
         self.big_parameter_collection = None
         self.parameter_log = parameter_log
@@ -192,46 +289,3 @@ class BaseFitter(object):
         
             
 
-
-
-class BaseOptimizer(object):
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def __call__(self, *args, **kwargs):
-        pass
-
-
-class BaseFitnessFunction(object):
-    __metaclass__ = ABCMeta
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError
-
-
-class SimpleRMSFitnessFunction(BaseFitnessFunction):
-    def __init__(self, observed_spectrum_wavelength, observed_spectrum_flux):
-        self.observed_spectrum_wavelength = observed_spectrum_wavelength
-        self.observed_spectrum_flux = observed_spectrum_flux
-
-    def __call__(self, radial1d_mdl):
-
-        if radial1d_mdl.spectrum_virtual.flux_nu.sum() > 0:
-            synth_spectrum = radial1d_mdl.spectrum_virtual
-        else:
-            synth_spectrum = radial1d_mdl.spectrum
-        synth_spectrum_flux = np.interp(self.observed_spectrum_wavelength,
-                                        synth_spectrum.wavelength.value[::-1],
-                                        synth_spectrum.flux_lambda.value[::-1])
-
-        fitness = np.sum((synth_spectrum_flux -
-                          self.observed_spectrum_flux) ** 2)
-
-        return fitness, synth_spectrum

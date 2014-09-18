@@ -1,1 +1,1 @@
-from base import BaseFitter, BaseOptimizer, BaseFitnessFunction
+from base import BaseFitter, BaseFitnessFunction, FitterConfiguration
