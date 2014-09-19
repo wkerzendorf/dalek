@@ -109,7 +109,9 @@ class FitterConfiguration(object):
         number_of_samples = conf_dict['fitter']['number_of_samples']
         max_iterations = conf_dict['fitter']['max_iterations']
         optimizer_dict = conf_dict['fitter'].pop('optimizer')
-        optimizer = all_optimizer_dict[optimizer_dict.pop('name')]
+        optimizer_class = all_optimizer_dict[optimizer_dict.pop('name')]
+        optimizer = optimizer_class(parameter_config, number_of_samples,
+                                    **optimizer_dict)
         fitness_function_dict = conf_dict['fitter'].pop('fitness_function')
         fitness_function_class = all_fitness_function_dict[
             fitness_function_dict.pop('name')]
