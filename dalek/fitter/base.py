@@ -171,8 +171,8 @@ class FitterConfiguration(object):
                                                               number_of_samples)
         initial_data = np.array([np.random.uniform(lbound, ubound,
                                           size=number_of_samples)
-                        for lbound, ubound in self.parameter_bounds])
-        return ParameterCollection(initial_data.T, columns=self.parameter_names)
+                        for lbound, ubound in self.parameter_config.parameter_bounds])
+        return ParameterCollection(initial_data.T, columns=self.parameter_config.parameter_names)
 
 
 
