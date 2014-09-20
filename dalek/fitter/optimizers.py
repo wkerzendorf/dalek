@@ -130,7 +130,7 @@ class DEOptimizer(BaseOptimizer):
                 if fitness[index] < self.fitness[index]:
                     self.population[index] = np.array(new_population[index])
                     self.fitness[index] = fitness[index]
-        candidatesself.population.copy()
+        candidates = self.population.copy()
         for index, vector in enumerate(self.population):
             indices = [i for i in range(self.n) if i != index]
             random.shuffle(indices)
