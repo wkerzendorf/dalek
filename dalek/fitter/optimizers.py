@@ -130,7 +130,7 @@ class DEOptimizer(BaseOptimizer):
                 if fitness[index] < self.fitness[index]:
                     self.population[index] = np.array(new_population[index])
                     self.fitness[index] = fitness[index]
-        candidates = np.array([vec[:-1] for vec in self.population])
+        candidatesself.population.copy()
         for index, vector in enumerate(self.population):
             indices = [i for i in range(self.n) if i != index]
             random.shuffle(indices)
@@ -144,7 +144,7 @@ class DEOptimizer(BaseOptimizer):
                 else:
                     candidates[index][j] = x
             if self.violates_bounds(candidates[index]):
-                candidates[index] = np.array(vector[:-1])
+                candidates[index] = np.array(vector)
 	params = ParameterCollection(np.array(candidates),
                                  columns=self.parameter_config.parameter_names)
 	return params
