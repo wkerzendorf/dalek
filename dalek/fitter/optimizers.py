@@ -41,6 +41,10 @@ class BaseOptimizer(object):
 
         return parameter_collection
 
+    def split_parameter_collection(self, parameter_collection):
+        fitness = parameter_collection['dalek.fitness']
+        return fitness, parameter_collection[
+            self.parameter_config.parameter_names]
 
 
 class RandomSampling(BaseOptimizer):
@@ -78,8 +82,9 @@ class LuusJaakolaOptimizer(BaseOptimizer):
 
     def __call__(self, parameter_collection):
 
-        best_fit = parameter_collection.ix[
-            parameter_collection['dalek.fitness'].argmin()]
+        fitness, split_param_collection = self.split_parameter_collection(
+            parameter_collection)
+        best_fit = split_param_collection.ix[fitness.argmin()]
 
         best_x = best_fit[self.parameter_config.parameter_names].values
         new_parameters = [best_x]
@@ -101,7 +106,10 @@ class DEOptimizer(BaseOptimizer):
         self.parameter_config = parameter_conf
         self.cr = kwargs.get('cr', 0.9)
         self.f = kwargs.get('f', 0.5)
+        if number_of_samples < 4:
+            raise ValueError('Need at least 4 samples for differential evolution')
         self.n = number_of_samples
+
         self.lbounds = np.array(self.parameter_config.lbounds)
         self.ubounds = np.array(self.parameter_config.ubounds)
 
@@ -109,6 +117,7 @@ class DEOptimizer(BaseOptimizer):
         return any(x < self.lbounds) or any(x > self.ubounds)
         
     def __call__(self, parameter_collection):
+
         if self.population is None:
             self.population = np.array(parameter_collection.values)
         else:
