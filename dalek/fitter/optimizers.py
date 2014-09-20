@@ -14,6 +14,34 @@ class BaseOptimizer(object):
     def __call__(self, *args, **kwargs):
         pass
 
+    @staticmethod
+    def normalize_parameter_collection(parameter_collection):
+        """
+        Normalize the abundances, assuming all abundances have the prefix
+        'model.abundances'.
+
+        Parameters
+        ----------
+
+        parameter_collection: ~dalek.parallel.ParameterCollection
+
+        Returns
+        -------
+            : ~dalek.parallel.ParameterCollection
+
+        """
+
+        abundance_columns = [item for item in parameter_collection.columns
+                             if item.startswith('model.abundances')]
+
+        parameter_collection[abundance_columns]
+        parameter_collection[abundance_columns] = (parameter_collection[
+                                                       abundance_columns].div(
+            parameter_collection[abundance_columns].sum(axis=1), axis=0))
+
+        return parameter_collection
+
+
 
 class RandomSampling(BaseOptimizer):
     def __init__(self, fitter_configuration):
@@ -49,8 +77,11 @@ class LuusJaakolaOptimizer(BaseOptimizer):
                           self.parameter_config.lbounds) * 0.5
 
     def __call__(self, parameter_collection):
-        best_fit = parameter_collection.ix[parameter_collection['dalek.fitness'].argmin()]
-        best_x = best_fit.values[:-1]
+
+        best_fit = parameter_collection.ix[
+            parameter_collection['dalek.fitness'].argmin()]
+
+        best_x = best_fit[self.parameter_config.parameter_names].values
         new_parameters = [best_x]
         lbounds = self.parameter_config.lbounds
         ubounds = self.parameter_config.ubounds
@@ -60,8 +91,9 @@ class LuusJaakolaOptimizer(BaseOptimizer):
                                                     np.clip(best_x + self.d,
                                                             lbounds, ubounds)))
         self.d *= 0.95
-        return ParameterCollection(np.array(new_parameters),
+        new_parameter_collection = ParameterCollection(np.array(new_parameters),
                                    columns=self.parameter_config.parameter_names)
+        return self.normalize_parameter_collection(new_parameter_collection)
 
 class DEOptimizer(BaseOptimizer):
     def __init__(self, parameter_conf, number_of_samples, **kwargs):
