@@ -98,12 +98,14 @@ class LuusJaakolaOptimizer(BaseOptimizer):
         self.d *= 0.95
         new_parameter_collection = ParameterCollection(np.array(new_parameters),
                                    columns=self.parameter_config.parameter_names)
-        return self.normalize_parameter_collection(new_parameter_collection)
+        return new_parameter_collection
 
 class DEOptimizer(BaseOptimizer):
     def __init__(self, parameter_conf, number_of_samples, **kwargs):
         self.population = None
+        self.fitness = None
         self.parameter_config = parameter_conf
+        self.dim = len(self.parameter_config.parameter_names)
         self.cr = kwargs.get('cr', 0.9)
         self.f = kwargs.get('f', 0.5)
         if number_of_samples < 4:
@@ -117,24 +119,26 @@ class DEOptimizer(BaseOptimizer):
         return any(x < self.lbounds) or any(x > self.ubounds)
         
     def __call__(self, parameter_collection):
-
+        fitness, split_param_collection = self.split_parameter_collection(
+            parameter_collection)
         if self.population is None:
-            self.population = np.array(parameter_collection.values)
+            self.population = np.array(split_param_collection.values)
+            self.fitness = np.array(fitness.values)
         else:
-            new_population = np.array(parameter_collection.values)
+            new_population = np.array(split_param_collection.values)
             for index, vector in enumerate(self.population):
-                if new_population[index][-1] < vector[-1]:
+                if fitness[index] < self.fitness[index]:
                     self.population[index] = np.array(new_population[index])
-        d = len(self.population[0]) - 1
+                    self.fitness[index] = fitness[index]
         candidates = np.array([vec[:-1] for vec in self.population])
         for index, vector in enumerate(self.population):
             indices = [i for i in range(self.n) if i != index]
             random.shuffle(indices)
             i1, i2, i3 = indices[:3]
             a, b, c = self.population[i1], self.population[i2], self.population[i3]
-            r_ = random.randint(0, d - 1)
-            for j, x in enumerate(vector[:-1]):
-                ri = random.random()
+            r_ = np.random.randint(0, self.dim)
+            for j, x in enumerate(vector):
+                ri = np.random.random()
                 if ri < self.cr or j == r_:
                     candidates[index][j] = a[j] + self.f * (b[j] - c[j])
                 else:
@@ -196,6 +200,7 @@ class PSOOptimizerGbest(BaseOptimizer):
         self.x += self.v
         params = ParameterCollection(
             candidates, columns=self.parameter_config.parameter_names)
+        
         return params
         
 
