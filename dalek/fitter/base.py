@@ -375,10 +375,9 @@ class BaseFitter(object):
 
 
         while self.current_iteration < self.fitter_configuration.max_iterations:
-            logger.info('\nAt iteration {0} of {1}\n'.format(i + 1,
-                                                           self.
-                                                           fitter_configuration.
-                                                           max_iterations))
+            logger.info('\nAt iteration {0} of {1}\n'.format(
+                self.current_iteration + 1,
+                self.fitter_configuration.max_iterations))
             self.current_parameters = self.run_single_fitter_iteration(
                 self.current_parameters)
             if self.fitter_log is not None:
