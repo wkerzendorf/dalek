@@ -132,12 +132,16 @@ class FitterConfiguration(object):
         else:
             spectral_store = None
 
+        resume = conf_dict.get('resume', False)
+
+
+
         return cls(optimizer, fitness_function,
                    parameter_config=parameter_config,
                    default_config=default_config, atom_data=atom_data,
                    number_of_samples=number_of_samples,
                    max_iterations=max_iterations, fitter_log=fitter_log,
-                   spectral_store=spectral_store)
+                   spectral_store=spectral_store, resume=resume)
 
 
 
@@ -147,7 +151,7 @@ class FitterConfiguration(object):
     def __init__(self, optimizer, fitness_function, parameter_config, default_config,
                  atom_data, number_of_samples, max_iterations=50,
                  generate_initial_parameter_collection=None, fitter_log=None,
-                 spectral_store=None):
+                 spectral_store=None, resume=False):
 
         self.optimizer = optimizer
         self.fitness_function = fitness_function
@@ -161,6 +165,7 @@ class FitterConfiguration(object):
             generate_initial_parameter_collection
         self.fitter_log = fitter_log
         self.spectral_store = spectral_store
+        self.resume = resume
 
 
     @property
@@ -295,7 +300,8 @@ class BaseFitter(object):
     """
 
     def __init__(self, remote_clients,
-                 fitter_configuration, worker=fitter_worker):
+                 fitter_configuration, worker=fitter_worker,
+                 current_iteration=0):
 
         self.fitter_configuration = fitter_configuration
         self.default_config = fitter_configuration.default_config
@@ -309,6 +315,7 @@ class BaseFitter(object):
         self.parameter_collection_log = None
         self.fitter_log = fitter_configuration.fitter_log
         self.spectral_store = fitter_configuration.spectral_store
+        self.current_iteration = current_iteration
 
 
 
@@ -334,6 +341,7 @@ class BaseFitter(object):
         parameter_collection['dalek.engine_id'] = [item['engine_id']
                                                    for item in
                                                    fitnesses_result.metadata]
+        parameter_collection['dalek.current_iteration'] = self.current_iteration
 
 
 
@@ -365,8 +373,8 @@ class BaseFitter(object):
     def run_fitter(self, initial_parameters):
         self.current_parameters = initial_parameters
 
-        i = 0
-        while i < self.fitter_configuration.max_iterations:
+
+        while self.current_iteration < self.fitter_configuration.max_iterations:
             logger.info('\nAt iteration {0} of {1}\n'.format(i + 1,
                                                            self.
                                                            fitter_configuration.
@@ -376,7 +384,7 @@ class BaseFitter(object):
             if self.fitter_log is not None:
                 self.parameter_collection_log.to_csv(self.fitter_log)
 
-            i += 1
+            self.current_iteration += 1
 
         
             
