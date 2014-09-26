@@ -4,7 +4,7 @@ from dalek import triangle
 from dalek.parallel import ParameterCollection
 from tardis.io.config_reader import ConfigurationNameSpace
 
-def simple_triangle_plot(dalek_log_file, truth_config=None, plot_contours=False):
+def simple_triangle_plot(dalek_log_file, truth_config=None, plot_contours=False, bins=100):
     """
 
     Parameters
@@ -51,7 +51,8 @@ def simple_triangle_plot(dalek_log_file, truth_config=None, plot_contours=False)
 
     triangle.corner(dalek_data[data_columns], weights=1/fitness,
                     labels=labels,
-                    plot_contours=plot_contours, normed=True, truths=truths)
+                    plot_contours=plot_contours, normed=True, truths=truths,
+                    bins=bins)
 
 
 
