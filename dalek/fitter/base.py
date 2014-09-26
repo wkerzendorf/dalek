@@ -121,6 +121,8 @@ class FitterConfiguration(object):
         fitness_function_class = all_fitness_function_dict[
             fitness_function_dict.pop('name')]
         fitness_function = fitness_function_class(**fitness_function_dict)
+
+        resume = conf_dict.get('resume', False)
         fitter_log = conf_dict['fitter'].get('fitter_log', None)
 
         spectral_store_dict = conf_dict['fitter'].get('spectral_store', None)
@@ -128,11 +130,12 @@ class FitterConfiguration(object):
             spectral_store_fname = spectral_store_dict['fname']
             spectral_store_mode = spectral_store_dict.get('mode', 'all')
             spectral_store = SpectralStore(spectral_store_fname,
-                                           mode=spectral_store_mode)
+                                           mode=spectral_store_mode,
+                                           resume=resume)
         else:
             spectral_store = None
 
-        resume = conf_dict.get('resume', False)
+
 
 
 
@@ -166,6 +169,24 @@ class FitterConfiguration(object):
         self.fitter_log = fitter_log
         self.spectral_store = spectral_store
         self.resume = resume
+
+        if self.resume:
+            if not os.path.exists(fitter_log):
+                raise IOError('Requested resume - but previous fitter log ({0})'
+                              ' doesn\'t exist'.format(fitter_log))
+
+            resume_log = pd.read_csv(fitter_log, index_col=0)
+
+            log_parameters = set(resume_log)
+            conf_parameters = set(self.parameter_config.parameter_names)
+
+            if log_parameters != conf_parameters:
+                raise ValueError('Requested resume - but given fitter log ({0})'
+                                 ' indicates different parameters than '
+                                 'requested parameters'.format(fitter_log))
+
+
+
 
 
     @property
@@ -225,16 +246,18 @@ class SpectralStore(object):
     """
 
     def __init__(self, h5_fname, spectral_store_name='spectral_store',
-                 mode='all'):
+                 mode='all', clobber=False, resume=False):
         self.h5_fname = h5_fname
         self.spectral_store_name = spectral_store_name
         self.mode = mode.strip().lower()
 
-        if os.path.exists(h5_fname):
+        if os.path.exists(h5_fname) and not (not clobber or resume):
             raise IOError('HDF5 spectral store {0} exists - '
                           'will not overwrite'.format(h5_fname))
-
-        self.h5_file_handle = h5py.File(h5_fname, mode='w')
+        if resume:
+            self.h5_file_handle = h5py.File(h5_fname, mode='w')
+        else:
+            self.h5_file_handle = h5py.File(h5_fname, mode='a')
 
     def store_spectrum(self, id, spectrum):
         specname = 'spectrum{:d}'.format(id)
