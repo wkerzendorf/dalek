@@ -1,1 +1,3 @@
-from base import BaseFitter, BaseOptimizer, BaseFitnessFunction
+from base import BaseFitter, FitterConfiguration
+from fitness_function import BaseFitnessFunction
+from optimizers import BaseOptimizer
