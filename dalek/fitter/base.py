@@ -189,7 +189,7 @@ class FitterConfiguration(object):
                 resume_log['dalek.current_iteration'].max() + 1)
             self.resume_log = resume_log
 
-            def resume_generate_parameters(self, number_of_samples=None)
+            def resume_generate_parameters(self, number_of_samples=None):
                 mask = (self.resume_log['dalek.iteration'] ==
                         self.current_iteration - 1)
                 return self.resume_log[mask]
