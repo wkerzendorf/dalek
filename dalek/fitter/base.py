@@ -178,7 +178,8 @@ class FitterConfiguration(object):
 
             resume_log = pd.read_csv(fitter_log, index_col=0)
 
-            log_parameters = set(resume_log)
+            log_parameters = set([item for item in resume_log.columns
+                                  if not item.startswith('dalek.')])
             conf_parameters = set(self.parameter_config.parameter_names)
 
             if log_parameters != conf_parameters:
