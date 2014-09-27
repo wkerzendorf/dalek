@@ -67,7 +67,6 @@ class OrderedDictYAMLLoader(yaml.Loader):
         return mapping
 
 
-
 class FitterConfiguration(object):
     """
     Storing the names and bounds of the parameters
@@ -122,7 +121,7 @@ class FitterConfiguration(object):
             fitness_function_dict.pop('name')]
         fitness_function = fitness_function_class(**fitness_function_dict)
 
-        resume = conf_dict.get('resume', False)
+        resume = conf_dict['fitter'].get('resume', False)
         fitter_log = conf_dict['fitter'].get('fitter_log', None)
 
         spectral_store_dict = conf_dict['fitter'].get('spectral_store', None)
@@ -186,7 +185,17 @@ class FitterConfiguration(object):
                 raise ValueError('Requested resume - but given fitter log ({0})'
                                  ' indicates different parameters than '
                                  'requested parameters'.format(fitter_log))
-            self.current_iteration = resume_log['dalek.current_iteration'].max()
+            self.current_iteration = (
+                resume_log['dalek.current_iteration'].max() + 1)
+            self.resume_log = resume_log
+
+            def resume_generate_parameters(self, number_of_samples=None)
+                mask = (self.resume_log['dalek.iteration'] ==
+                        self.current_iteration - 1)
+                return self.resume_log[mask]
+
+
+            self.generate_initial_parameter_collection = resume_generate_parameters
 
 
 
