@@ -168,7 +168,9 @@ class FitterConfiguration(object):
             generate_initial_parameter_collection
         self.fitter_log = fitter_log
         self.spectral_store = spectral_store
+
         self.resume = resume
+        self.current_iteration = 0
 
         if self.resume:
             if not os.path.exists(fitter_log):
@@ -184,6 +186,8 @@ class FitterConfiguration(object):
                 raise ValueError('Requested resume - but given fitter log ({0})'
                                  ' indicates different parameters than '
                                  'requested parameters'.format(fitter_log))
+            self.current_iteration = resume_log['dalek.current_iteration'].max()
+
 
 
 
@@ -323,8 +327,7 @@ class BaseFitter(object):
     """
 
     def __init__(self, remote_clients,
-                 fitter_configuration, worker=fitter_worker,
-                 current_iteration=0):
+                 fitter_configuration, worker=fitter_worker):
 
         self.fitter_configuration = fitter_configuration
         self.default_config = fitter_configuration.default_config
@@ -338,7 +341,7 @@ class BaseFitter(object):
         self.parameter_collection_log = None
         self.fitter_log = fitter_configuration.fitter_log
         self.spectral_store = fitter_configuration.spectral_store
-        self.current_iteration = current_iteration
+        self.current_iteration = fitter_configuration.current_iteration
 
 
 
