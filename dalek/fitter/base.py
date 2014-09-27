@@ -229,7 +229,7 @@ class FitterConfiguration(object):
             return self.generate_initial_parameter_collection(number_of_samples=
                                                               number_of_samples)
         if self.resume:
-            return self.resume_generate_parameters()
+            return self.resume_generate_parameters().reset_index()
 
         initial_data = np.array([np.random.uniform(lbound, ubound,
                                           size=number_of_samples)
@@ -350,10 +350,16 @@ class BaseFitter(object):
 
         self.optimizer = self.fitter_configuration.optimizer
         
-        self.parameter_collection_log = None
+
+
         self.fitter_log = fitter_configuration.fitter_log
         self.spectral_store = fitter_configuration.spectral_store
         self.current_iteration = fitter_configuration.current_iteration
+        if self.fitter_configuration.resume:
+            self.parameter_collection_log = self.fitter_configuration.resume_log
+        else:
+            self.parameter_collection_log = None
+
 
 
 
