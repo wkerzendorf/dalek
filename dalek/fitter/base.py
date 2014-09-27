@@ -176,7 +176,8 @@ class FitterConfiguration(object):
                 raise IOError('Requested resume - but previous fitter log ({0})'
                               ' doesn\'t exist'.format(fitter_log))
 
-            resume_log = pd.read_csv(fitter_log, index_col=0)
+            resume_log = ParameterCollection(
+                pd.read_csv(fitter_log, index_col=0))
 
             log_parameters = set([item for item in resume_log.columns
                                   if not item.startswith('dalek.')])
