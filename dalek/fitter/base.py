@@ -268,7 +268,7 @@ class SpectralStore(object):
         self.spectral_store_name = spectral_store_name
         self.mode = mode.strip().lower()
 
-        if os.path.exists(h5_fname) and not (not clobber or resume):
+        if os.path.exists(h5_fname) and not (clobber or resume):
             raise IOError('HDF5 spectral store {0} exists - '
                           'will not overwrite'.format(h5_fname))
         if resume:
