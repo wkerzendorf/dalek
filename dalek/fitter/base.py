@@ -272,9 +272,9 @@ class SpectralStore(object):
             raise IOError('HDF5 spectral store {0} exists - '
                           'will not overwrite'.format(h5_fname))
         if resume:
-            self.h5_file_handle = h5py.File(h5_fname, mode='w')
-        else:
             self.h5_file_handle = h5py.File(h5_fname, mode='a')
+        else:
+            self.h5_file_handle = h5py.File(h5_fname, mode='w')
 
     def store_spectrum(self, id, spectrum):
         specname = 'spectrum{:d}'.format(id)
