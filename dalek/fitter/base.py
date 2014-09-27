@@ -190,13 +190,6 @@ class FitterConfiguration(object):
                 resume_log['dalek.current_iteration'].max() + 1)
             self.resume_log = resume_log
 
-            def resume_generate_parameters(self, number_of_samples=None):
-                mask = (self.resume_log['dalek.iteration'] ==
-                        self.current_iteration - 1)
-                return self.resume_log[mask]
-
-
-            self.generate_initial_parameter_collection = resume_generate_parameters
 
 
 
@@ -210,6 +203,12 @@ class FitterConfiguration(object):
     @property
     def all_parameter_types(self):
         return self.parameter_types + self.fitter_parameter_types
+
+    def resume_generate_parameters(self, number_of_samples=None):
+        mask = (self.resume_log['dalek.current_iteration'] ==
+                self.current_iteration - 1)
+        return self.resume_log[mask]
+
 
     def get_initial_parameter_collection(self, number_of_samples=None):
         """
@@ -229,6 +228,9 @@ class FitterConfiguration(object):
         if self.generate_initial_parameter_collection is not None:
             return self.generate_initial_parameter_collection(number_of_samples=
                                                               number_of_samples)
+        if self.resume:
+            return self.resume_generate_parameters()
+
         initial_data = np.array([np.random.uniform(lbound, ubound,
                                           size=number_of_samples)
                         for lbound, ubound in self.parameter_config.parameter_bounds])
