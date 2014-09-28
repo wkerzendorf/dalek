@@ -67,7 +67,6 @@ class OrderedDictYAMLLoader(yaml.Loader):
         return mapping
 
 
-
 class FitterConfiguration(object):
     """
     Storing the names and bounds of the parameters
@@ -121,6 +120,8 @@ class FitterConfiguration(object):
         fitness_function_class = all_fitness_function_dict[
             fitness_function_dict.pop('name')]
         fitness_function = fitness_function_class(**fitness_function_dict)
+
+        resume = conf_dict['fitter'].get('resume', False)
         fitter_log = conf_dict['fitter'].get('fitter_log', None)
 
         spectral_store_dict = conf_dict['fitter'].get('spectral_store', None)
@@ -128,16 +129,21 @@ class FitterConfiguration(object):
             spectral_store_fname = spectral_store_dict['fname']
             spectral_store_mode = spectral_store_dict.get('mode', 'all')
             spectral_store = SpectralStore(spectral_store_fname,
-                                           mode=spectral_store_mode)
+                                           mode=spectral_store_mode,
+                                           resume=resume)
         else:
             spectral_store = None
+
+
+
+
 
         return cls(optimizer, fitness_function,
                    parameter_config=parameter_config,
                    default_config=default_config, atom_data=atom_data,
                    number_of_samples=number_of_samples,
                    max_iterations=max_iterations, fitter_log=fitter_log,
-                   spectral_store=spectral_store)
+                   spectral_store=spectral_store, resume=resume)
 
 
 
@@ -147,7 +153,7 @@ class FitterConfiguration(object):
     def __init__(self, optimizer, fitness_function, parameter_config, default_config,
                  atom_data, number_of_samples, max_iterations=50,
                  generate_initial_parameter_collection=None, fitter_log=None,
-                 spectral_store=None):
+                 spectral_store=None, resume=False):
 
         self.optimizer = optimizer
         self.fitness_function = fitness_function
@@ -162,6 +168,34 @@ class FitterConfiguration(object):
         self.fitter_log = fitter_log
         self.spectral_store = spectral_store
 
+        self.resume = resume
+        self.current_iteration = 0
+
+        if self.resume:
+            if not os.path.exists(fitter_log):
+                raise IOError('Requested resume - but previous fitter log ({0})'
+                              ' doesn\'t exist'.format(fitter_log))
+
+            resume_log = ParameterCollection(
+                pd.read_csv(fitter_log, index_col=0))
+
+            log_parameters = set([item for item in resume_log.columns
+                                  if not item.startswith('dalek.')])
+            conf_parameters = set(self.parameter_config.parameter_names)
+
+            if log_parameters != conf_parameters:
+                raise ValueError('Requested resume - but given fitter log ({0})'
+                                 ' indicates different parameters than '
+                                 'requested parameters'.format(fitter_log))
+            self.current_iteration = (
+                resume_log['dalek.current_iteration'].max() + 1)
+            self.resume_log = resume_log
+
+
+
+
+
+
 
     @property
     def all_parameter_names(self):
@@ -170,6 +204,12 @@ class FitterConfiguration(object):
     @property
     def all_parameter_types(self):
         return self.parameter_types + self.fitter_parameter_types
+
+    def resume_generate_parameters(self, number_of_samples=None):
+        mask = (self.resume_log['dalek.current_iteration'] ==
+                self.current_iteration - 1)
+        return self.resume_log[mask]
+
 
     def get_initial_parameter_collection(self, number_of_samples=None):
         """
@@ -189,6 +229,9 @@ class FitterConfiguration(object):
         if self.generate_initial_parameter_collection is not None:
             return self.generate_initial_parameter_collection(number_of_samples=
                                                               number_of_samples)
+        if self.resume:
+            return self.resume_generate_parameters().reset_index()
+
         initial_data = np.array([np.random.uniform(lbound, ubound,
                                           size=number_of_samples)
                         for lbound, ubound in self.parameter_config.parameter_bounds])
@@ -220,16 +263,18 @@ class SpectralStore(object):
     """
 
     def __init__(self, h5_fname, spectral_store_name='spectral_store',
-                 mode='all'):
+                 mode='all', clobber=False, resume=False):
         self.h5_fname = h5_fname
         self.spectral_store_name = spectral_store_name
         self.mode = mode.strip().lower()
 
-        if os.path.exists(h5_fname):
+        if os.path.exists(h5_fname) and not (clobber or resume):
             raise IOError('HDF5 spectral store {0} exists - '
                           'will not overwrite'.format(h5_fname))
-
-        self.h5_file_handle = h5py.File(h5_fname, mode='w')
+        if resume:
+            self.h5_file_handle = h5py.File(h5_fname, mode='a')
+        else:
+            self.h5_file_handle = h5py.File(h5_fname, mode='w')
 
     def store_spectrum(self, id, spectrum):
         specname = 'spectrum{:d}'.format(id)
@@ -306,9 +351,16 @@ class BaseFitter(object):
 
         self.optimizer = self.fitter_configuration.optimizer
         
-        self.parameter_collection_log = None
+
+
         self.fitter_log = fitter_configuration.fitter_log
         self.spectral_store = fitter_configuration.spectral_store
+        self.current_iteration = fitter_configuration.current_iteration
+        if self.fitter_configuration.resume:
+            self.parameter_collection_log = self.fitter_configuration.resume_log
+        else:
+            self.parameter_collection_log = None
+
 
 
 
@@ -334,6 +386,7 @@ class BaseFitter(object):
         parameter_collection['dalek.engine_id'] = [item['engine_id']
                                                    for item in
                                                    fitnesses_result.metadata]
+        parameter_collection['dalek.current_iteration'] = self.current_iteration
 
 
 
@@ -365,18 +418,17 @@ class BaseFitter(object):
     def run_fitter(self, initial_parameters):
         self.current_parameters = initial_parameters
 
-        i = 0
-        while i < self.fitter_configuration.max_iterations:
-            logger.info('\nAt iteration {0} of {1}\n'.format(i + 1,
-                                                           self.
-                                                           fitter_configuration.
-                                                           max_iterations))
+
+        while self.current_iteration < self.fitter_configuration.max_iterations:
+            logger.info('\nAt iteration {0} of {1}\n'.format(
+                self.current_iteration + 1,
+                self.fitter_configuration.max_iterations))
             self.current_parameters = self.run_single_fitter_iteration(
                 self.current_parameters)
             if self.fitter_log is not None:
                 self.parameter_collection_log.to_csv(self.fitter_log)
 
-            i += 1
+            self.current_iteration += 1
 
         
             
