@@ -24,8 +24,6 @@ def simple_triangle_plot(dalek_log_file, truth_config=None, plot_contours=False,
     if truth_config is not None:
         truth_config = ConfigurationNameSpace.from_yaml(truth_config)
 
-    data_columns = [item for item in dalek_data.columns if not item.startswith('dalek.')]
-    abundance_columns = [item for item in data_columns if 'abundance' in item]
     fitness = dalek_data['dalek.fitness']
     labels = []
     truths = []
@@ -47,7 +45,7 @@ def simple_triangle_plot(dalek_log_file, truth_config=None, plot_contours=False,
     if truths == []:
         truths = None
 
-    dalek_data[abundance_columns] = dalek_data[abundance_columns].values / dalek_data[abundance_columns].sum(axis=1).values[None].T
+
 
     triangle.corner(dalek_data[data_columns], weights=1/fitness,
                     labels=labels,
