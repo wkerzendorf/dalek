@@ -128,9 +128,11 @@ class FitterConfiguration(object):
         if spectral_store_dict is not None:
             spectral_store_fname = spectral_store_dict['fname']
             spectral_store_mode = spectral_store_dict.get('mode', 'all')
+            spectral_store_clobber = spectral_store_dict.get('clobber', False)
             spectral_store = SpectralStore(spectral_store_fname,
                                            mode=spectral_store_mode,
-                                           resume=resume)
+                                           resume=resume,
+                                           clobber=spectral_store_clobber)
         else:
             spectral_store = None
 
