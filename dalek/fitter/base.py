@@ -365,6 +365,12 @@ class BaseFitter(object):
 
 
 
+    def clean_dalek_results(self, dalek_results):
+        for ar in dalek_results:
+            for msg_id in ar.msg_ids:
+                del self.launcher.lbv.results[msg_id]
+                del self.remote_clients.results[msg_id]
+                del self.remote_clients.metadata[msg_id]
 
     def evaluate_parameter_collection(self, parameter_collection):
         config_dict_list = parameter_collection.to_config(self.default_config)
@@ -379,6 +385,9 @@ class BaseFitter(object):
 
         fitnesses = zip(*fitnesses_result.result)[0]
         spectra = zip(*fitnesses_result.result)[1]
+
+        self.clean_dalek_results(fitnesses_result)
+        
         parameter_collection['dalek.fitness'] = fitnesses
         parameter_collection['dalek.time_elapsed'] = [(item['completed'] -
                                                        item['started']).
