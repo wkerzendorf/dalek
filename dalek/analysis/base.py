@@ -99,7 +99,8 @@ class Analyse(object):
                         labels=self.data_labels.values(), plot_contours=plot_contours,
                         normed=True, truths=truths, bins=bins)
 
-    def animate_fitting_evolution(self, fit_spectrum, spectral_store, mode='best', movie_fname=None):
+    def animate_fitting_evolution(self, fit_spectrum, spectral_store,
+                                  mode='best', movie_fname=None):
 
         fit_wave, fit_flux = np.loadtxt(fit_spectrum, unpack=True)
         fit_flux = savitzky_golay(fit_flux, 21, 3)
@@ -141,6 +142,68 @@ class Analyse(object):
         # call the animator.  blit=True means only re-draw the parts that have changed.
         anim = animation.FuncAnimation(fig, animate, init_func=init,
                                        frames=len(iterations), interval=100,
+                                       blit=False)
+
+        # save the animation as an mp4.  This requires ffmpeg or mencoder to be
+        # installed.  The extra_args ensure that the x264 codec is used, so that
+        # the video can be embedded in html5.  You may need to adjust this for
+        # your system: for more information, see
+        # http://matplotlib.sourceforge.net/api/animation_api.html
+        if movie_fname is not None:
+            anim.save(movie_fname, fps=30, extra_args=['-vcodec', 'libx264',
+                                                       '-pix_fmt', 'yuv420p'],
+                      savefig_kwargs={'facecolor':'black'})
+        return anim
+
+
+    def animate_fitting_evolution_fill_between(self, fit_spectrum,
+                                               spectral_store, movie_fname=None):
+
+        fit_wave, fit_flux = np.loadtxt(fit_spectrum, unpack=True)
+        fit_flux = savitzky_golay(fit_flux, 21, 3)
+        iterations = self.fitter_log['dalek.current_iteration'].unique()
+        fh = h5py.File(spectral_store, 'r')
+        fluxes = []
+        fluxes_min = []
+        fluxes_max = []
+
+        for i in iterations:
+            spec_indices = self.fitter_log.index[self.fitter_log['dalek.current_iteration'] == i]
+            fluxes = []
+            for y in spec_indices:
+                fluxes.append(savitzky_golay(np.array(fh['spectral_store/'
+                                          'spectrum{0}'.format(y)]), 21, 3))
+            fluxes = np.array(fluxes)
+            fluxes_min.append(fluxes.min(axis=0))
+            fluxes_max.append(fluxes.max(axis=0))
+
+        fh.close()
+
+        # First set up the figure, the axis, and the plot element we want to animate
+        fig = plt.figure(facecolor='black')
+        ax = plt.axes(xlim=(2000, 10000), ylim=(0, 1.2e-13))
+        ax.set_xticks(np.arange(2000, 10000, 3000))
+        ax.set_axis_bgcolor('black')
+        ax.plot(fit_wave, fit_flux, lw=2, color='red')
+        line, = ax.plot([], [], lw=2, alpha=.8, color='yellow')
+        txt = ax.text(0.7, 0.8,'', horizontalalignment='center',
+                          verticalalignment='center', transform=ax.transAxes)
+        # initialization function: plot the background of each frame
+
+        # animation function.  This is called sequentially
+        def animate(i, wavelength, spec_flux, fluxes_min, fluxes_max, ax):
+            ax.cla()
+            ax.plot(wavelength, spec_flux, lw=2, color='red')
+            #ax.set_ylim(0, spec_flux.max()*2)
+            #ax.set_xlim(2000, 8000)
+            f_btwn = ax.fill_between(wavelength, fluxes_min[i], fluxes_max[i], color='yellow', alpha=.5)
+            txt.set_text('iteration {0:03d}'.format(i))
+            #fig.canvas.draw()
+            return f_btwn,
+
+        # call the animator.  blit=True means only re-draw the parts that have changed.
+        anim = animation.FuncAnimation(fig, animate,
+                                       frames=len(iterations), fargs=(fit_wave, fit_flux, fluxes_min, fluxes_max, ax), interval=100,
                                        blit=False)
 
         # save the animation as an mp4.  This requires ffmpeg or mencoder to be
