@@ -182,7 +182,8 @@ class FitterConfiguration(object):
                 pd.read_csv(fitter_log, index_col=0))
 
             log_parameters = set([item for item in resume_log.columns
-                                  if not item.startswith('dalek.')])
+                                  if not (item.startswith('dalek.') or
+                                          item == 'index')])
             conf_parameters = set(self.parameter_config.parameter_names)
 
             if log_parameters != conf_parameters:
@@ -365,6 +366,16 @@ class BaseFitter(object):
 
 
 
+    def clean_dalek_results(self, dalek_results):
+        for msg_id in dalek_results.msg_ids:
+            if msg_id in self.launcher.lbv.results:
+                del self.launcher.lbv.results[msg_id]
+
+            if msg_id in  self.launcher.remote_clients.results:
+                del self.launcher.remote_clients.results[msg_id]
+
+            if msg_id in self.launcher.remote_clients.metadata:
+                del self.launcher.remote_clients.metadata[msg_id]
 
     def evaluate_parameter_collection(self, parameter_collection):
         config_dict_list = parameter_collection.to_config(self.default_config)
@@ -379,6 +390,9 @@ class BaseFitter(object):
 
         fitnesses = zip(*fitnesses_result.result)[0]
         spectra = zip(*fitnesses_result.result)[1]
+
+        self.clean_dalek_results(fitnesses_result)
+
         parameter_collection['dalek.fitness'] = fitnesses
         parameter_collection['dalek.time_elapsed'] = [(item['completed'] -
                                                        item['started']).
