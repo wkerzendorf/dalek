@@ -89,7 +89,7 @@ class BaseLauncher(object):
 
     def __init__(self, remote_clients, worker=simple_worker,
                  atom_data=None):
-
+        self.remote_clients = remote_clients
         self.prepare_remote_clients(remote_clients, atom_data)
         self.worker = worker
         self.lbv = remote_clients.load_balanced_view()
