@@ -368,9 +368,14 @@ class BaseFitter(object):
 
     def clean_dalek_results(self, dalek_results):
         for msg_id in dalek_results.msg_ids:
-            del self.launcher.lbv.results[msg_id]
-            del self.launcher.remote_clients.results[msg_id]
-            del self.launcher.remote_clients.metadata[msg_id]
+            if msg_id in self.launcher.lbv.results:
+                del self.launcher.lbv.results[msg_id]
+
+            if msg_id in  self.launcher.remote_clients.results:
+                del self.launcher.remote_clients.results[msg_id]
+
+            if msg_id in self.launcher.remote_clients.metadata:
+                del self.launcher.remote_clients.metadata[msg_id]
 
     def evaluate_parameter_collection(self, parameter_collection):
         config_dict_list = parameter_collection.to_config(self.default_config)
