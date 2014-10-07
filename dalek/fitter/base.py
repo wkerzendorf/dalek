@@ -182,7 +182,8 @@ class FitterConfiguration(object):
                 pd.read_csv(fitter_log, index_col=0))
 
             log_parameters = set([item for item in resume_log.columns
-                                  if not item.startswith('dalek.')])
+                                  if not (item.startswith('dalek.') or
+                                          item == 'index')])
             conf_parameters = set(self.parameter_config.parameter_names)
 
             if log_parameters != conf_parameters:
@@ -387,7 +388,7 @@ class BaseFitter(object):
         spectra = zip(*fitnesses_result.result)[1]
 
         self.clean_dalek_results(fitnesses_result)
-        
+
         parameter_collection['dalek.fitness'] = fitnesses
         parameter_collection['dalek.time_elapsed'] = [(item['completed'] -
                                                        item['started']).
