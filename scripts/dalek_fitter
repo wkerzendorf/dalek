@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import argparse
+
+from dalek.fitter import run_fitter
+
+parser = argparse.ArgumentParser(description='Run the Dalek fitter')
+parser.add_argument('dalek_configuration_fname',
+                    help='YAML file that contains the setup for the fitter')
+parser.add_argument('--resume', action='store_true', default=None,
+                   help='Instruct Dalek to resume')
+
+args = parser.parse_args()
+
+
+run_fitter(args.dalek_configuration_fname)

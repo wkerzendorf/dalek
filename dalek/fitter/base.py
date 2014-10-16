@@ -11,6 +11,7 @@ import yaml
 from collections import OrderedDict
 import h5py
 import pandas as pd
+from time import time
 
 
 from dalek.parallel.parameter_collection import ParameterCollection
@@ -67,6 +68,44 @@ class OrderedDictYAMLLoader(yaml.Loader):
         return mapping
 
 
+def run_fitter(dalek_configuration_fname, init_sleep_time=300):
+    """
+    Function to start a fit with the given configuration name
+
+    Parameters
+    ----------
+
+    dalek_fitter_conf_fname: ~str
+        file name of the YAML configuration file for Dalek
+
+    init_sleep_time: ~float
+        time to sleep (in seconds) until to try again to see
+        if engines have connected (default 300s)
+
+    Returns
+    -------
+        : dalek.BaseFitter
+    """
+
+    from IPython.parallel import Client
+
+    while True:
+        rc = Client()
+        if len(rc) > 0:
+            break
+        logger.info('No engines currently connected. Sleeping for {0} s '
+                    'before trying again'.format(init_sleep_time))
+        time.sleep(init_sleep_time)
+
+    logger.info('{0} engines connected starting fit in 30 s'.format(len(rc)))
+
+    fitter_conf = FitterConfiguration.from_yaml(dalek_configuration_fname)
+    fitter = BaseFitter(rc, fitter_conf)
+    fitter.run_fitter(fitter_conf.get_initial_parameter_collection())
+
+    return fitter
+
+
 class FitterConfiguration(object):
     """
     Storing the names and bounds of the parameters
@@ -92,7 +131,7 @@ class FitterConfiguration(object):
 
 
     @classmethod
-    def from_yaml(cls, fname):
+    def from_yaml(cls, fname, resume_fit=None):
         """
         Reading the fitter configuration from a yaml file
         
@@ -121,7 +160,7 @@ class FitterConfiguration(object):
             fitness_function_dict.pop('name')]
         fitness_function = fitness_function_class(**fitness_function_dict)
 
-        resume = conf_dict['fitter'].get('resume', False)
+        resume = conf_dict['fitter'].get('resume', resume_fit)
         fitter_log = conf_dict['fitter'].get('fitter_log', None)
 
         spectral_store_dict = conf_dict['fitter'].get('spectral_store', None)
@@ -155,7 +194,7 @@ class FitterConfiguration(object):
     def __init__(self, optimizer, fitness_function, parameter_config, default_config,
                  atom_data, number_of_samples, max_iterations=50,
                  generate_initial_parameter_collection=None, fitter_log=None,
-                 spectral_store=None, resume=False):
+                 spectral_store=None, resume=None):
 
         self.optimizer = optimizer
         self.fitness_function = fitness_function
@@ -173,7 +212,11 @@ class FitterConfiguration(object):
         self.resume = resume
         self.current_iteration = 0
 
-        if self.resume:
+        if os.path.exists(fitter_log) and self.resume is None:
+            logger.info('Detected an old logfile {0} - resuming'.format(fitter_log))
+            self.resume = True
+
+        if self.resume == True:
             if not os.path.exists(fitter_log):
                 raise IOError('Requested resume - but previous fitter log ({0})'
                               ' doesn\'t exist'.format(fitter_log))
@@ -387,7 +430,7 @@ class BaseFitter(object):
             sys.stdout.write('\r{0}/{1} TARDIS runs done for current iteration'.format(
                 fitnesses_result.progress, len(fitnesses_result)))
             sys.stdout.flush()
-
+        print ' - done with iterations'
         fitnesses = zip(*fitnesses_result.result)[0]
         spectra = zip(*fitnesses_result.result)[1]
 
@@ -436,7 +479,7 @@ class BaseFitter(object):
 
 
         while self.current_iteration < self.fitter_configuration.max_iterations:
-            logger.info('\nAt iteration {0} of {1}\n'.format(
+            logger.info('\n\nAt iteration {0} of {1}\n'.format(
                 self.current_iteration + 1,
                 self.fitter_configuration.max_iterations))
             self.current_parameters = self.run_single_fitter_iteration(
