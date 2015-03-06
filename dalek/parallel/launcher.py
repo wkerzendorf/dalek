@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 from dalek.parallel.util import set_engines_cpu_affinity
 
 try:
-    from tardis.core import run_tardis
+    from tardis import run_tardis
 except ImportError:
     logger.critical('OLD version of tardis used please upgrade')
     run_tardis = lambda x: x
