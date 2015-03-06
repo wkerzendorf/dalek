@@ -17,7 +17,7 @@ from dalek import triangle
 class Analyse(object):
 
     def __init__(self, fitter_log_fname, spectral_store_fname=None,
-                 normalize_abundances=True):
+                 normalize_abundances=True, compare_config=None):
         self.fitter_log = pd.read_csv(fitter_log_fname, index_col=0)
 
         self.spectral_store_fname = spectral_store_fname
@@ -27,9 +27,9 @@ class Analyse(object):
                              if 'abundance' in item]
 
         if normalize_abundances:
-            self.fitter_log[self.abundance_columns] = (
-                self.fitter_log[self.abundance_columns].values /
-                self.fitter_log[self.abundance_columns].sum(axis=1).values[None].T)
+            self._fitter_log[self.abundance_columns] = (
+                self._fitter_log[self.abundance_columns].values /
+                self._fitter_log[self.abundance_columns].sum(axis=1).values[None].T)
 
         self.data_labels = []
 
@@ -44,6 +44,39 @@ class Analyse(object):
             self.data_labels.append((column, label))
         self.data_labels = OrderedDict(self.data_labels)
 
+        if compare_config is not None:
+            self._load_comparison_config(compare_config)
+        else:
+            self.comparison_dict = None
+
+
+
+    def _load_comparison_config(self, comparison_config_fname):
+        comparison_config = ConfigurationNameSpace.from_yaml(
+            comparison_config_fname)
+
+        self.comparison_dict = OrderedDict()
+        for column in self.data_columns:
+            default_value = comparison_config.get_config_item(column)
+            #removing the quantity-ness
+            #default_value = getattr(default_value, 'value', default_value)
+            self.comparison_dict[column] = default_value
+
+
+
+    @property
+    def fitter_log(self):
+        fitter_log_mask = ((self._fitter_log['dalek.current_iteration']
+                            >= self.min_iteration) &
+                           (self._fitter_log['dalek.current_iteration']
+                            < self.max_iteration))
+        return self._fitter_log[fitter_log_mask]
+
+    @fitter_log.setter
+    def fitter_log(self, value):
+        self._fitter_log = value
+        self.min_iteration = -1
+        self.max_iteration = np.inf
 
     def visualize_parameter_evolution(self, parameter_name, bins=10, ax=None, **kwargs):
         """
@@ -55,7 +88,8 @@ class Analyse(object):
         param_evolution_hist = np.empty((bins, len(
             self.fitter_log['dalek.current_iteration'].unique())))
 
-        hist, bin_edges = np.histogram(self.fitter_log[parameter_name])
+        hist, bin_edges = np.histogram(self.fitter_log[parameter_name],
+                                       bins=bins)
 
         for i in xrange(param_evolution_hist.shape[1]):
             data = self.fitter_log[parameter_name][
@@ -75,24 +109,20 @@ class Analyse(object):
         ax.set_xlabel('Iterations')
         ax.set_ylabel(self.data_labels[parameter_name])
 
+        if self.comparison_dict is not None:
+            ax.axhline(self.comparison_dict[parameter_name], lw=2, color='black')
+
+
         return param_evolution_hist
 
-    def visualize_triangle_plot(self, truth_config=None, plot_contours=False, bins=100):
-        if truth_config is not None:
-            truth_config = ConfigurationNameSpace.from_yaml(truth_config)
+    def visualize_triangle_plot(self, plot_contours=False, bins=100):
 
         fitness = self.fitter_log['dalek.fitness']
-        truths = []
-        for column in self.data_columns:
 
-            if truth_config is not None:
-                default_value = truth_config.get_config_item(column)
-                default_value = getattr(default_value, 'value', default_value)
-                truths.append(default_value)
-
-        if truths == []:
+        if self.comparison_dict is not None:
+            truths = self.comparison_dict.values()
+        else:
             truths = None
-
 
 
         triangle.corner(self.fitter_log[self.data_columns], weights=1/fitness,
