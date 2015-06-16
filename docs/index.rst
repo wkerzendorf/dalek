@@ -7,7 +7,7 @@ this package is here:
 .. toctree::
   :maxdepth: 2
 
-  setup
+  setup/c2pap
 
 Reference/API
 =============

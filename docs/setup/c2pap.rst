@@ -1,35 +1,12 @@
-Hot to set-up DALEK
-===================
+Hot to set-up DALEK on C2PAP
+============================
 
 1. Set language to English. This is required even if you speak German or anything else since parts of IPython Parallel relies on Linux commands being in English. To do this add the following line to your ~/.bashrc::
 
     export LANGUAGE="en_US"
 
 
-#. Download and set-up Anaconda. I used full version that can be found here. After downloading it install it by running the following command and following instructions::
-
-    $ bash Anaconda-2.2.0-Linux-x86_64.sh
-
-
-#. Add Anaconda paths to system variables by sourcing the .bashrc file::
-
-    $ bash ~/.bashrc
-
-#. Install TARDIS::
-
-    $ wget https://raw.githubusercontent.com/tardis-sn/tardis/master/conda-requirements
-    $ conda create -n tardis --file conda-requirements
-
-
-#. Activate TARDIS::
-
-    $ source ~/anaconda/envs/tardis/bin/activate tardis
-
-#. Install needed Python packages::
-
-    $ pip install ipython
-    $ pip install astropy_helpers
-    $ pip install zmq
+#. Download and set-up Anaconda and TARDIS by following instructions `here <https://tardis.readthedocs.org/en/latest/installation.html>`_.
 
 #. Create a new ipython profile::
 
