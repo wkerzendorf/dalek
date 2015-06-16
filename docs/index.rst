@@ -7,7 +7,9 @@ this package is here:
 .. toctree::
   :maxdepth: 2
 
-  packagename/index.rst
+  setup/c2pap
 
-.. note:: Do not edit this page - instead, place all documentation for the
-          affiliated package inside ``packagename/``
+Reference/API
+=============
+
+.. automodapi:: dalek
