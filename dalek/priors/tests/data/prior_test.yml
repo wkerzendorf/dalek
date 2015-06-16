@@ -1,2 +1,9 @@
+parameters:
+  - supernova.luminosity_requested
+  - model.abundances.O
+
+
 priors:
-  GaussianPrior
+  GaussianPrior:
+    m: 9.5
+    s: 0.3
