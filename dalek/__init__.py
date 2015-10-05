@@ -123,6 +123,7 @@ if not _ASTROPY_SETUP_:
     del os, warn, config_dir  # clean up namespace
 
 import logging
+from dalek.base.model import assemble_tardis_model
 
 logger = logging.getLogger('dalek')
 logger.setLevel(logging.INFO)

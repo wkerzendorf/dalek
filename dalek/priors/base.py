@@ -94,7 +94,8 @@ class FixedPrior(object):
         return "fixed prior: {0}".format(self.val)
 
 
-
+def load_config_yaml(yaml_fname):
+    pass
 
 
 class PriorCollection(object):

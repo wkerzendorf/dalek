@@ -1,9 +1,9 @@
 parameters:
-  - supernova.luminosity_requested
-  - model.abundances.O
-
-
-priors:
-  GaussianPrior:
-    m: 9.5
-    s: 0.3
+  supernova.luminosity_requested:
+    prior:
+      name: GaussianPrior
+      m: 9.5
+      s: 0.3
+  model.abundances.O:
+    prior:
+      name: Uniform
