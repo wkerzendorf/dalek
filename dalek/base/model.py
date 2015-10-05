@@ -125,17 +125,32 @@ class LogLikelihood(Model):
               'param_values')
     outputs = ('loglikelihood',)
 
+    spec_fname = None
+
     def __init__(self, observed_wavelength, observed_flux,
-                 observed_uncertainty):
+                 observed_uncertainty, wavelength_start=0.,
+                 wavelength_end=np.inf):
         self.observed_wavelength = observed_wavelength
         self.observed_flux = observed_flux
         self.observed_uncertainty = observed_uncertainty
+
+        self.wavelength_slice = slice(
+            self.observed_wavelength.searchsorted(wavelength_start),
+            self.observed_wavelength.searchsorted(wavelength_end))
         super(LogLikelihood, self).__init__()
+
+    def save_current_spectrum(self, fname):
+        np.savetxt(fname, zip(
+            self.current_wavelength, self.current_flux,
+            self.current_uncertainty))
 
     def evaluate(self, wavelength, flux, uncertainty, param_names,
                  param_values):
-        return (-0.5 * np.sum((self.observed_flux - flux)**2 /
-                              (uncertainty**2 + self.observed_uncertainty**2)))
+        self.current_wavelength = wavelength
+        self.current_flux = flux
+        self.current_uncertainty = uncertainty
+        return (-0.5 * np.sum((self.observed_flux[self.wavelength_slice] - flux[self.wavelength_slice])**2 /
+                              (uncertainty[self.wavelength_slice]**2 + self.observed_uncertainty[self.wavelength_slice]**2)))
 
 
 def _convert_param_names(param_names):
