@@ -37,7 +37,7 @@ class BaseLikelihoodModel(object):
         uid = str(uuid4())
 
         if np.isinf(priors):
-            loglikelihood = np.inf
+            loglikelihood = -0.5 * np.inf
         else:
             loglikelihood = self.tardis_model.evaluate(*transformed_params)
             if self.spec_dir is not None:
