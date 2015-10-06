@@ -50,4 +50,5 @@ class BaseLikelihoodModel(object):
         self._write_log(uid, args, transformed_params, loglikelihood,
                         kwargs.get('log_properties', []))
 
-        return loglikelihood
+        properties_dict = dict(uid=uid, transformed_params=transformed_params)
+        return loglikelihood, properties_dict
