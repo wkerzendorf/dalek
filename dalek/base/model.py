@@ -4,6 +4,8 @@ from tardis.io.config_reader import ConfigurationNameSpace, Configuration
 from tardis import run_tardis, model, simulation, atomic
 from astropy import units as u, constants as const
 
+from scipy import ndimage, interpolate
+
 from astropy.modeling import Model, Parameter
 import numpy as np
 from collections import OrderedDict
@@ -34,11 +36,13 @@ class TARDISModelMixin(Model):
                                                 validate=False,
                                                 atom_data=self.atom_data)
         radial1d_mdl = model.Radial1DModel(config)
+
         simulation.run_radial1d(radial1d_mdl)
         runner = radial1d_mdl.runner
 
         param_names = ['t_inner']
         param_values = [radial1d_mdl.t_inner]
+        self.mdl = radial1d_mdl
         return (runner.emitted_packet_nu,
                 runner.emitted_packet_luminosity,
                 runner.virt_packet_nus * u.Hz,
@@ -88,9 +92,14 @@ class SimpleTARDISUncertaintyModel(Model):
 
         luminosity_density = luminosity / np.diff(self.wavelength_bins)
 
-
+        self.luminosity_density = luminosity_density
+        self.uncertainty = uncertainty.value
         return (self.observed_wavelength, luminosity_density, uncertainty.value,
                 param_names, param_values)
+
+    def save_current_spectrum(self, fname):
+        np.savetxt(fname, zip(self.observed_wavelength, self.luminosity_density,
+                              self.uncertainty))
 
 
 
@@ -100,7 +109,7 @@ class NormRedSpectrum(Model):
 
     def __init__(self, norm_start=6300):
         super(NormRedSpectrum, self).__init__()
-        self.norm_start = 6300
+        self.norm_start = norm_start
 
     def evaluate(self, wavelength, flux, uncertainty, param_names, param_values):
         param_dict = OrderedDict(zip(param_names, param_values))
@@ -117,6 +126,21 @@ class NormRedSpectrum(Model):
         return (wavelength, normed_flux, normed_uncertainty,
                 param_names, param_values)
 
+class NormUniformSmooth(Model):
+    inputs = ('wavelength', 'flux', 'uncertainty', 'param_names', 'param_values')
+    outputs = ('wavelength', 'flux', 'uncertainty', 'param_names', 'param_values')
+
+    def __init__(self, smoothing_scale=100.):
+        self.smoothing_scale = smoothing_scale
+        super(NormUniformSmooth, self).__init__()
+
+    def evaluate(self, wavelength, flux, uncertainty, param_names, param_values):
+        flux_filtered = ndimage.uniform_filter1d(flux, self.smoothing_scale)
+        flux_normalized = flux / flux_filtered - 1.
+        flux_normalized -= np.mean(flux_normalized)
+        uncertainty_normalized = uncertainty / flux_filtered
+
+        return wavelength, flux_normalized, uncertainty_normalized, param_names, param_values
 
 
 

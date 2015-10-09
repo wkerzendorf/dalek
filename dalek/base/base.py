@@ -43,7 +43,7 @@ class BaseLikelihoodModel(object):
             if self.spec_dir is not None:
                 spec_fname = os.path.join(
                         self.spec_dir, 'dalek_{0}_spec.txt'.format(uid))
-                self.tardis_model[-1].save_current_spectrum(spec_fname)
+                self.tardis_model[1].save_current_spectrum(spec_fname)
 
 
 
