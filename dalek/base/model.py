@@ -4,6 +4,8 @@ from tardis.io.config_reader import ConfigurationNameSpace, Configuration
 from tardis import run_tardis, model, simulation, atomic
 from astropy import units as u, constants as const
 
+from dalek.base.simulation import TinnerSimulation
+
 from scipy import ndimage, interpolate
 
 from astropy.modeling import Model, Parameter
@@ -49,6 +51,45 @@ class TARDISModelMixin(Model):
                 (runner.virt_packet_energies /
                  runner.time_of_simulation),
                 param_names, param_values)
+
+
+class TARDISTinnerModelMixin(TARDISModelMixin):
+    inputs = tuple()
+    outputs = ('packet_nu', 'packet_energy', 'virtual_nu', 'virtual_energy',
+               'param_name', 'param_value')
+
+    t_inner = Parameter()
+
+    def evaluate(self, *args, **kwargs):
+        config_name_space = copy.deepcopy(self.config_name_space)
+        for i, param_value in enumerate(args):
+            config_name_space.set_config_item(
+                self.convert_param_dict.values()[i], param_value)
+        config = Configuration.from_config_dict(config_name_space,
+                                                validate=False,
+                                                atom_data=self.atom_data)
+
+        radial1d_mdl = model.Radial1DModel(config)
+
+        simulation = TinnerSimulation(config)
+
+        simulation.run_simulation(radial1d_mdl, self.t_inner * u.K)
+
+        runner = radial1d_mdl.runner
+
+        param_names = ['t_inner']
+        param_values = [radial1d_mdl.t_inner]
+        self.mdl = radial1d_mdl
+        return (runner.emitted_packet_nu,
+                runner.emitted_packet_luminosity,
+                runner.virt_packet_nus * u.Hz,
+                (runner.virt_packet_energies /
+                 runner.time_of_simulation),
+                param_names, param_values)
+
+
+
+
 
 class SimpleTARDISUncertaintyModel(Model):
     inputs = ('packet_nu', 'packet_energy', 'virtual_nu', 'virtual_energy',
@@ -199,7 +240,7 @@ def _convert_param_names(param_names):
 
     return OrderedDict(zip(short_param_names, param_names))
 
-def assemble_tardis_model(fname, param_names):
+def assemble_tardis_model(fname, param_names, mixin=TARDISTinnerModelMixin):
     """
 
     :param yaml_fname:
@@ -225,7 +266,7 @@ def assemble_tardis_model(fname, param_names):
 
     class_dict['__init__'] = TARDISModelMixin.__init__
 
-    simple_model = type('SimpleTARDISModel', (TARDISModelMixin, ),
+    simple_model = type('SimpleTARDISModel', (mixin, ),
                         class_dict)
     return simple_model(config, **param_dict)
 
