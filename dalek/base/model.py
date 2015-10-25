@@ -264,7 +264,7 @@ def assemble_tardis_model(fname, param_names, mixin=TARDISTinnerModelMixin):
         class_dict[key] = Parameter()
         param_dict[key] = getattr(value, 'value', value)
 
-    class_dict['__init__'] = TARDISModelMixin.__init__
+    class_dict['__init__'] = mixin.__init__
 
     simple_model = type('SimpleTARDISModel', (mixin, ),
                         class_dict)
