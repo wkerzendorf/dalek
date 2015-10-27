@@ -250,7 +250,6 @@ def assemble_tardis_model(fname, param_names, mixin=TARDISTinnerModelMixin):
     class_dict = {}
     param_dict = {}
     short_param_name_dict = _convert_param_names(param_names)
-    1/0
 
     class_dict['convert_param_dict'] = short_param_name_dict
     for key in short_param_name_dict:
