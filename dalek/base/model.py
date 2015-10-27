@@ -58,8 +58,6 @@ class TARDISTinnerModelMixin(TARDISModelMixin):
     outputs = ('packet_nu', 'packet_energy', 'virtual_nu', 'virtual_energy',
                'param_name', 'param_value')
 
-    t_inner = Parameter()
-
     def evaluate(self, *args, **kwargs):
         config_name_space = copy.deepcopy(self.config_name_space)
         for i, param_value in enumerate(args):
@@ -252,6 +250,7 @@ def assemble_tardis_model(fname, param_names, mixin=TARDISTinnerModelMixin):
     class_dict = {}
     param_dict = {}
     short_param_name_dict = _convert_param_names(param_names)
+    1/0
 
     class_dict['convert_param_dict'] = short_param_name_dict
     for key in short_param_name_dict:
@@ -263,6 +262,10 @@ def assemble_tardis_model(fname, param_names, mixin=TARDISTinnerModelMixin):
             pass
         class_dict[key] = Parameter()
         param_dict[key] = getattr(value, 'value', value)
+
+    if 'Tinner' in mixin.__name__:
+        param_dict['t_inner'] = 10000
+        class_dict['t_inner'] = Parameter()
 
     class_dict['__init__'] = mixin.__init__
 
